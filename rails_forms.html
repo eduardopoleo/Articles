@@ -1,0 +1,187 @@
+
+<p>Lesson two of the <a href="http://www.gotealeaf.com/curriculum#!rails">Rails course</a> was packed with information and it was definitely harder to digest than Lesson 1. In this post I am going to talk about the different kind of forms we can use. </p>
+
+<h3 style='padding-top:15px;'><i>Params</i></h3
+<p>Before talking about forms it is important to understand what <code>params</code> is and how it works in rails. Params is an instance of the <a href="http://edgeapi.rubyonrails.org/classes/ActionController/Parameters.html">ActionController::Parameters</a> and possesses several methods for the control of mass assignment and exposure of attributes. Params transfers the url information between the two end-points of a request, and its values can be accessed by the use of keys just like a regular ruby hash. </p>
+
+<p>The request endpoints usually correspond to controller actions which ultimately render views with the information requested. Params are routed to the appropriate controller#action pair by following the routing "rules" set in config/routes.rb</p>
+
+<p>A simple example of a params hash will be:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+  <code>{"action"=>"show", "controller"=>"posts", "id"=>"1"}</code>
+</pre>
+
+<p>This will take the information <code>"id"=>1</code> to the <code>"show"</code> action in the <code>"posts"</code> controller.</p>
+
+<h3 style='padding-top:15px;'><i>Forms</i></h3>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Pure Html forms</h4>
+
+<p>A simple html form will look similar to:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code><xmp><form action="/posts" method="POST">
+  Title <input type="text" name="my_title"><br>
+  URL <input type="text" name="my_url"><br>
+  Description <input type="text" name="my_description"><br>
+  <input type="submit" value="Submit">
+</form></xmp></code></pre>
+
+<p>The <code>action = "/posts"</code> and the <code>method="POST"</code> will allow the router to map the params hash to the appropriate controller#action pair. For instance a possible route for this request would be:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location => config/routes.rb 
+post '/posts', to: 'posts#create'</code>
+</pre>
+
+<p>According to this rule the information summited by this form will be taken to the <code>create</code> action in the <code>posts</code> controller.</p>
+
+<p>The information inputted in the text fields will be temporarily stored in params as values with keys corresponding to their name as it appears in the form, as shown below:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>params = {"my_title"=>"Title",
+          "my_url"=>"Url",
+          "my_description"=>"Desc"}</code>
+</pre>
+
+<p>Finally, once in the controller the information can be properly parsed out and saved into the database.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>@post = Post.new
+@post.url = params[:my_url]
+@post.title = params[:my_title]
+@post.description = params[:my_description]
+@post.save</code>
+</pre>
+
+
+<h4>Pros</h4>
+<ul>
+  <li>These forms are really simple and straightforward to use.</li>
+  <li>They are useful to understand the request/response process.</li>
+</ul>
+
+<h4>Cons</h4>
+<ul>
+  <li>The are rarely used in rails because they do not generate a Authenticity Token. So in order for them to work it is required to disable the <code>protect_from_forgery with: :exception</code> rails security feature.</li>
+  <li>The information has to be parsed out "manually", as shown in the snippet above, in order to be properly store in the data base.</li>
+</ul>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Forms with Rails tags helpers</h4>
+
+<p>This type of forms use rails tag helpers but the way they work is similar to the pure html forms. An example of this type of forms could be: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code><xmp><%= form_tag'/posts' do%>
+  <%= label_tag :title, "Input title"%>
+  <%= text_field_tag :title %>
+  <br/>
+  <%= label_tag :url, "Input url"%>
+  <%= text_field_tag :url %>
+  <br/>
+  <%= label_tag :description, "Input Description"%>
+  <%= text_field_tag :description %>
+  <%= submit_field"Create Post", class: 'btn btn-primary' %>
+<%end%></xmp></code></pre>
+
+<p>The params generated when submitting this form will look like:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>{"utf8"=>"✓",
+ "authenticity_token"=>"DXT9ZMsWEaEgkO6kjXfmLTtrNpc2izIZdfjoQOc1/I0=",
+ "title"=>"title",
+ "url"=>"url",
+ "description"=>"Description",
+ "commit"=>"Create Post"}</code>
+</pre>
+
+<p>Note that contrary to pure html forms, the params hash contains an <code>authenticity_token</code> that allows the use of protection from forgery. The information in params can also be parsed out and used as shown previously.</p>
+
+<h4>Pros</h4>
+<ul>
+  <li>They are still relatively simple to use.</li>
+  <li>They generate a hidden Authenticity Token so there is no need to disable the protection from forgery.</li>
+</ul>
+
+<h4>Cons</h4>
+<ul>
+  <li>The information still have to be parsed out manually in order to be used and properly stored.</li>
+</ul>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> Rails model backed forms </h4>
+
+<p>These are the preferred type of forms in rails for performing CRUD actions on a resource/model. Here is an example:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code><xmp><%=form_for @post do |f| %>
+  <%= f.label :title %>
+  <%= f.text_field :title %>
+  <br/>
+  <%= f.label :url %>
+  <%= f.text_field :url %>
+  <br/>
+  <%= f.label :description %>
+  <%= f.text_field :description %>
+  <br/>
+  <%= f.submit "Create Post", class: 'btn btn-primary' %>
+<%end%></xmp></code></pre>
+
+<p>For this type of forms it is necessary to provide a new or saved object, in this case <code>@post</code>. The form is going to generate a form builder <code>f</code> which we can use to create input fields for all the attributes of our object, for example <code>f.text_field :url</code>.</p>
+
+<p>Contrary to the previous forms the input fields MUST correspond to attributes (including virtual attributes) of <code>@post</code>, otherwise the form will throw an error.</p>
+
+<p>An example of the params generated when submitting the form could be: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>{"utf8"=>"✓",
+ "authenticity_token"=>"DXT9ZMsWEaEgkO6kjXfmLTtrNpc2izIZdfjoQOc1/I0=",
+ "post"=> {"title"=>"Title", "url"=>"Url", "description"=>"Description"},
+ "commit"=>"Post!",
+ "action"=>"create",
+ "controller"=>"posts"}</code>
+</pre>
+
+<p>As we can see here the post attributes are stored in a hash within params under the key <code>"post"</code>.</p>
+
+<p> This is convenient because we do not need to parse out the information as before, we can simple mass assign it to the new object. In order to do that we can do:
+</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>@post = Post.new(params.require(:post).permit(:title, :url, :description))</code>
+</pre>
+
+<p>The <code>params.require(:post)</code> just specifies that we only require the values stored under the <code>:post</code> key. On the other hand, the <code>permit()</code> indicates which of those values are we going to allow for mass assignment. This "selective" mass assignment constitutes a Rails 4 security feature known as Strong Parameters, and are only necessary for this type of forms.</p>
+
+<p>Another great feature of these forms is that they can easily be used to update records. In this case, we only need to pass in an already saved <code>@post</code> object and the form will automatically populate the fields with that corresponding info, allowing for easy editing.
+
+<p>The way the form "magically" knows what to do with the object is by applying <code>.new_record?</code> (in this specific case) to the <code>@post</code>.</p>
+
+<h4>Pros</h4>
+<ul>
+  <li>Mass assignment. We do not need to parse information out in order to store it in the data base.</li>
+  <li>We only need to provide an object and the form will figure out the corresponding routing url and verbs.</li>
+  <li>When updating an object the attribute fields will be populated with the object info, which is a great usability feature.</li>
+</ul>
+
+<h4>Cons</h4>
+
+<ul>
+  <li>They follow strong Rails conventions and are harder to understand.</li>
+</ul>
+
+<p> Thanks for reading!</p>
+
+EXTRA non included in the article but important!
+IMP: That the form form for new and update can be the same !!! and we can set them as partials
+As a major consequence we are using the same partial in 4 different actions:
+  - new
+  - create
+  - edit
+  - create
+So this is DRY code but still we have to be very careful that we have instantiated the correct variables and that all the
+path are tested to failure
+
+Existing object in backed for
+  - Rails will try to map it as posts/id and by using the _method = patch which comes as a hidden input will redirect to the 
+  update action
+  - Rails will use the _method to know where to go to avoid browser inconsistency 
+  - We do not have to do anything because form for will know whether it is an existing object or not and will use the right 
+  verb by setting the appropiated _method

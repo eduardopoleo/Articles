@@ -1,0 +1,130 @@
+the syntax required to set up a regular many to many assotiatios is the following
+
+If a post has many categories
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>Class Post < ActiveRecord::Base
+  has_many :post_categories
+  has_many :categories, through: :post_categories
+end
+
+Class Category < ActiveRecord::Base
+  has_many :post_categories
+  has_many :categories, through: :post_categories
+end
+
+Class PostCategory < ActiveRecord::Base
+  belongs_to :post
+  belongs_to :category
+end</code>
+</pre>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>post_categories
+id --> integer
+caterory_id --> integer
+post_id --> integer
+
+categories
+id --> integer
+name --> string
+
+post 
+id --> integer
+title --> string
+content --> text</code>
+</pre>
+
+There is an slightly modified version of this type of relationship that has an 
+
+friends on facebook
+
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>class User
+  has_many :friendships
+  has_many :friends, through: friendships  
+end
+
+class Friendship
+  belongs_to :user
+  belongs_to :friend, :class_name => "User"
+end</code>
+</pre>
+
+
+So we only need to models because there is not such a thing as a friend model because all friends are users!
+
+Although there is not friend model the schema for the friendship model will look like this:
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>friendship
+user_id --> integer
+friend_id --> integer </code>
+</pre>
+
+The controller code for the frienship will look like this:
+
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>class FrienshipsController < ApplicationController
+  def create
+    @friendship = current_user.friendships.build(friend_id: params[:friend_id])
+    if @friendship.save
+      flash[:notice] = "Your friend request have been successfully sent"
+      redirect_to user_path(current_user) 
+    else
+      flash[:error] = "Your friend request could not be sent"
+      redirect_to user_path(current_user) 
+    end
+
+  def destroy
+    @friendship = current_user.friendships.find(params[:id])
+    @friendship.destroy
+    flash[:notice] = "You have succesfully unfriend someone"
+    redirect_to user_path(current_user)
+  end
+end</code>
+</pre>
+
+When trying to destroy these type of relationships we just need to target the join model, in this case the friendship.
+We can also access the apointments or the friends or whatever by referencing the join model itself. 
+when looping through our friends we may be tempted to do something like this
+
+current_user.friends.each |friend|
+  friend.name
+end
+
+this is limiting because although we defitely are going to get the desire result we will not be able to modify the corresponding join assotiatios
+
+link_to "Remove friend", post: delete .. etc wont work because we are not trying to delete the user we are trying to destroy the "friendship"
+
+So it is better if we loop through the information stored in the friendship model. This will allow us to make modification to the join model, in this case friendship.
+
+@user.friendships.each do |friendship|
+  friendship.friend.name
+end
+
+This allows us to for instance remove friendships by
+
+link_to remove, friendship, method: 'delete'
+
+
+So far we are only able to see friends that we have added but our list wont contain those friends that have added us. We c
+
+I can only see friends through frienships where I am the user_id and my friend is on the friend_id. Not the other way around. so
+
+we can add the following code to our application
+Why can't I just do something like this friendships.where(friend_id: current_user.id)
+
+@friendships.each do |friendship|
+  frienship.user.name
+end
+
+
+has_many :reverse_friendships, class_name: "Friendship", :foreign_key => "friend_id"
+has_many :reverse_friends, through: invers_friendships, :source => :user
+
+The class_name is added because reverse frienships are stills friendships but only the ones that we would not normaly see and we also have to tell rails which
+foreign key it will use.
+

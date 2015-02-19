@@ -1,0 +1,28 @@
+<p><a href="https://github.com/thoughtbot/shoulda-matchers">shoulda-matchers</a> are very helpful "one-liners that test common Rails functionality" such as validations and model associations.</p>
+
+<p>In a previous post I showed how we could test if a todo model was validating its attributes by asserting that the count of todos was zero after attempting to save (for the case when some of the attributes validated were missing). </p>
+
+<p>As expected shoulda-matchers provide an easier way to test this. In order to implement shoulda-matchers we need to:</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1. </span>Install the gem</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#gemfile
+group :test do
+  gem 'shoulda-matchers', require: false
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Write your tests!</h4>
+
+<p>If for instance, we have a model <code>video</code> that requires the presence of a <code>:title</code> and a <code>:description</code> and also <code>have_many :comments</code> and <code>belongs_to :user</code> we can just simply write the following:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#spec/models/video_spec.rb
+it {should belong_to(:category)}
+it {should have_many(:comments)}
+it {should validate_presence_of(:title)}
+it {should validate_presence_of(:description)}</code>
+</pre>
+
+<p>This is a huuuge!! space and time saver.</p>

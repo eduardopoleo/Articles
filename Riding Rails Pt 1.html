@@ -1,0 +1,79 @@
+<p>On lesson 1 of the <a href="http://www.gotealeaf.com/curriculum#!rails">Rapid Prototyping with Rails </a>we learned a lot!. I will do a quick review of the main topics of the lesson.</p>
+ <h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#1.</span> Model-View-Controller (MVC) </h4>
+<p>MVC is the default architectural pattern used in Rails.</p>
+
+<p>In general terms the View corresponds to what the user sees, and mostly comprises HTML&CSS files. The Model handles the database queries and sets the associations between the different <a href="http://guides.rubyonrails.org/routing.html#resources-on-the-web">resources</a> in your app.</p> 
+
+<p>Finally, the Controller is the middle man between these previous parts; it handles the routing request/responses, tell the models what to query for and updates (and renders) the views accordingly.</p>
+
+<p>Understanding the flow of information throughout this structure is critical to grasp Rails conventions and assumptions.</p>
+
+<h3 style='padding-top:15px;'><i>Case study</i></h3>
+<p>So let's imagine that we are developing a blog application that will contain several posts, and as with any other blog, we will let our readers write comments for each post.</p>
+<p>This sets up for a very simple one-to-many (1:M) association where a post will have many comments and a particular comment will belong to a certain post. We could then structure the corresponding rails code as follows:</p>  
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#2.</span> Model & Associations</h4>
+<p><strong>EDIT</strong>: [ All the models in rails will inherit from Active Record. Active Record is a really important pattern that will map all the data in our database to objects that can be easily accessed and manipulated by only using ruby code.</p>
+
+<p>More specifically Active Record will create 1 class for every table and 1 object for every row on a table.  It will also generate the corresponding setters and getters methods for each of the columns (attributes) and virtual attributes of every row (object). ]</p>
+
+<p>We will first create the models <code>Post</code> and <code>Comment</code> and set their association.</p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location => app/models/post.rb 
+class Post < ActiveRecord::Base
+  has_many :comments
+end
+
+#File location => app/models/comment.rb 
+class Comment < ActiveRecord::Base
+  belongs_to :post
+end</code>
+</pre>
+
+<p>The <code>class Comment</code> will assume that there exist a corresponding table called <code>comments</code> (name in snake_case and plural) that will contain all the comments objects with their corresponding attributes (title, created_at, etc).</p> 
+
+<p>In addition, the command <code>belongs_to</code> will look for a <code>post_id</code> column of type integer that will match the corresponding post PRIMARY_KEY.</p>
+
+<p><strong>EDIT</strong>: </p>
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#3.</span> Tables & Migrations</h4>
+<p>The corresponding migration code for the posts and comments tables will look something like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;  '>
+<code># Rails command: rails generate migration create_posts
+# File location (example): db/migrate/20140925021456_create_post.rb
+# Table name
+class CreatePost < ActiveRecord::Migration
+  def change
+    create_table :posts do |t|
+      # columns
+      t.string :title
+      t.text :content
+      t.timestamps
+    end
+  end
+end
+
+# Rails command: rails generate migration create_comments 
+# File location (example): db/migrate/20140925021957_create_comments.rb
+class CreateComments < ActiveRecord::Migration
+  def change
+    create_table :comments do |t|
+      # columns
+      t.text :content
+      t.integer :post_id
+      t.timestamps
+    end
+  end
+end</code>
+</pre>
+
+<p>The horrific number that precedes the migration name has the format YYYYMMDDHHMMSS and its a timestamp that indicates the exact time when the migration was created. This number is relevant because, as described in the <a href="http://guides.rubyonrails.org/migrations.html#creating-a-migration">rails documentation:</a></p> 
+
+<blockquote style= 'font-size:20px; font-family: ;padding-top:15px; padding-bottom:15px;'><i>"Rails uses this timestamp to determine which migration should be run and in what order"</i></blockquote>  
+
+<p>So this is why it is crucial to create migrations using generators and in the correct order.</p>
+
+<p>On the other hand, the <code>t.timestamps</code> within the migration code adds two columns corresponding to the <code>created_at</code> and the <code>updated_at</code> attributes. </p>
+<p>As explained before, the column <code>t.integer :post_id</code> is necessary due to the 1:M association between the model Post and Comment.</p>
+
+<p>I will go over the details of the controller in my next post!</p>

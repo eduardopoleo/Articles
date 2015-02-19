@@ -1,0 +1,189 @@
+<p>Nested resources are implemented as a way to express the natural hierarchy of our web applications. We are currently building a reddit-like blog where we would like to have different posts each with different comments associated to it. In order to implement this hierarchy we should start from the routes.</p>
+
+<h3 style='padding-top:15px;'><i>Nested Resources</i></h3>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location config/routes.rb
+PostitTemplate::Application.routes.draw do
+  resources :posts, except: [:destroy] do
+    resources :comments
+  end
+end</code>
+</pre>
+
+<p>This will generate the usual RESTful routes for the post resource but will also create nested routes with information from both the post and the comment resources. For the sake of  simplicity I am just going to show the the nested routes without their prefix. </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>verb   URl                                         controller#action
+GET    /posts/:post_id/comments(.:format)          comments#index
+POST   /posts/:post_id/comments(.:format)          comments#create
+GET    /posts/:post_id/comments/new(.:format)      comments#new
+GET    /posts/:post_id/comments/:id/edit(.:format) comments#edit            GET    /posts/:post_id/comments/:id(.:format)      comments#show
+PATCH  /posts/:post_id/comments/:id(.:format)      comments#update
+PUT    /posts/:post_id/comments/:id(.:format)      comments#update
+DELETE /posts/:post_id/comments/:id(.:format)      comments#destroy
+</code>
+</pre>
+<p><small><strong>Note:</strong> In reality we are only going to require the route associated with the create action.</small></p>
+
+<p>As we can see the routes are very similar to the non-nested RESTful routes except that now all the comments urls are associated to an specific <code>:post_id</code>. What this means is that in order to perform CRUD actions over a given comment we also will need to provide the specific post this comment belongs to. This goes in agreement with the 1:M relationship between the two models as shown below.</p>
+
+<h3 style='padding-top:15px;'><i>Model Association</i></h3>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location: app/model/post.rb
+class Post < ActiveRecord::Base
+  has_many :comments
+end
+
+#File location: app/model/comment.rb
+class Comment < ActiveRecord::Base
+  belongs_to :post
+end</code>
+</pre>
+    
+<p>As explained in previous posts this model association will expect a <code>post_id</code> foreign key on the comments database structure that indicates to which specific post a given comments belongs to.</p>    
+
+<h3 style='padding-top:15px;'><i>Views & Controllers</i></h3>
+
+<p>As with any other blog app the comments are expected to be shown in the same page as the parent post, as well as the create comment form. So we can add the following code to the post show page.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code><xmp><!--
+.
+.
+Some other code related to the post!
+.
+.
+-->
+<%= form_for [@post, @comment] do |f| %>
+  <%= f.label :body  %>
+  <%= f.text_area :body %>
+  <br/>
+  <%= f.submit "Post Comment", class: "btn btn-primary" %>
+<% end %>
+
+<% @post.comments.each do |comment| %>
+  <div class="row">
+    <div class="well span8">
+      <%=comment.body %>
+      <p><span class ='quiet'>by</span> <%=link_to comment.creator.name,'#' %> <small> at <%=fix_date(comment)%></small></p>
+    </div>
+  </div>
+<% end %></xmp></code></pre>
+
+<p>We see how in this case we need to provide two objects to the model backed form. The first corresponds to the parent <code>@post</code> object and the second to a new <code>@comment</code> whose attributes information are going to be set in the form.</p>
+
+<p>The code in the controllers is also going to change slightly.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location: app/controllers/posts_controller.rb
+def show
+  @post = Post.find(params[:id])
+  @comment = Comment.new
+end
+
+#File location: app/controllers/comments_controller.rb
+def create
+  @post = Post.find(params[:post_id])
+  @comment = @post.comments.build(params.require(:comment).permit(:body))
+
+  if @comment.save
+    flash[:notice] = "You comment was posted!"
+    redirect_to post_path(@post)
+  else
+    render 'posts/show'
+  end
+end</code>
+</pre>
+
+<p>Note how we need to define a new <code>@comment</code> in the post show action, which is the one that is going to be passed into the comment backed form.</p>
+<p>On the other hand, we also need to set the parent <code>@post</code>on the comments create action. Finally, the syntax <code>@post.comments.build</code> allow us to create a comment and immediately associate it with the parent post. This would be equivalent to:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>@comment = Comment.new(params.require(:comment).permit(:body))
+@comment.post = @post</code>
+</pre>
+
+<p>As always, thanks for reading!</p>
+
+allows us to 
+MODEL:
+1:M with
+  User (if "creator" define fk and class)
+  Post
+
+ROUTES:
+
+resources :posts, except: [:destroy] do
+    resources :comments, only: [:create]
+end
+
+This yiels
+post_comments POST posts/post_id/comments
+
+the url is plural like the Create action "posts"
+
+CONTROLLER:
+
+The controller will need two @:
+  - The Parent resource 
+    @post = Post.find(params[:user_id]. 
+  (note :user_id because :id correspond to comment id so do not mix them)
+
+  - Brand new resource @comment which will be validated with strong parameters
+    @comment = @post.comments.build(params.require(:comments).permit(:body))
+    @post.comments.build, is the sintax for creating nested routes. 
+    It can be done due to post has_many comments 
+
+
+
+  - It has the same validation:
+    if @comment.save
+      flash[:notice] = "Your comment was added"
+      ...
+  - For now defined creator
+    @comment.creator = User.first
+
+VIEW & FORM
+
+  - Comments are displayed in the post/:id page. SO IT DOES NOT HAVE (at leat naturally) SHOW!
+  - Comments are also created here so the form is in post/:id. SO IT DOES NOT HAVE IT'S OWN NEW PAGE.
+  - That is why the only route allowed was :create.
+
+The backend form takes two parameters, 
+  - The Parent, which is already created (In this case :post_id)
+  - A brand new comment object, which will be mass assiged with strong parameters.
+
+  <%= form_for [@post, @comment] do |f| %>
+    <%= f.text_area :body %>
+    <br/>
+    <%= f.submit "Create Comment", class: "btn btn-primary" %>
+  <%end%>
+
+VALIDATION:
+  
+  - Valiation commands are the same.
+  - To know what obj goes for the obj.errors one must check the obj what is the OBJ.SAVE in the controller
+
+HELPERS:
+
+  - The url problem (of not having http://), can be fixed using helpers, because it is not a good practice to 
+  leave it in the view, but also it is not good let the model handle it since it is a "presentation proble". 
+  - So a helper has to be created.
+  - starts_with? . It's method in rails.
+
+CATEGORIES in POSTS!
+To manage M:M associations we use the method _ids and []
+
+post.categories = [] will erase eveything inside the post.categories array
+post.categories_ids = [2,3] will add the categories with ids 2 and 3 to the post.categories array. 
+
+this methods HIT the data database inmediately.
+
+
+<%= f.collection_check_boxes(:category_ids, Category.all, :id, :name) do |cat|%>
+  <%=cat.label(class: 'checkbox inline') {cat.check_box() + cat.text } %>
+<%end%>
+
+Text fields do no have predetermined value because their content is set by the user input.
+Checkboxes and radio buttons etc, have predetermined values they only need to be checked, but already have meaning.

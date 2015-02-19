@@ -1,0 +1,62 @@
+<h3 style='padding-top:15px;'><i>Important Patterns</i></h3>
+
+<p>In the last post I talked about the most common types of forms and how they send information to different controller actions through the <code>params</code> hash.</p>
+
+<p>Now, once the request gets to the corresponding controller action it needs to be processed adequately before being saved into the data base.The following snippet is an important pattern commonly implemented in the controller's create and update actions:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location: app/controllers/posts_controller.rb
+
+def create
+  @post = Post.new(post_params)
+
+  if @post.save
+   redirect_to posts_path
+  else
+    render :new
+  end
+end
+
+def update
+  @post = Post.find(params[:id])
+
+  if @post.update(post_params)
+   redirect_to posts_path
+  else
+    render :edit
+  end
+end
+
+private
+def post_params
+    params.require(:post).permit(:title, :url, :description)
+end</code>
+</pre>
+
+<p>It is important to note that if the <code>@post</code> is not successfully saved or updated we should just <code>render</code> back the view where the form is and NOT! <code>redirect_to</code> another action. The latter would implicate an unnecessary extra request and most importantly, would cause us to loose the <code>@post</code>validation errors populated by Active Record.  
+</p>
+
+<h3 style='padding-top:15px;'><i>Validation</i></h3>
+<p>Validation in rails occurs in the model layer. The reasons for this are well explained in the <a href="http://guides.rubyonrails.org/active_record_validations.html#why-use-validations-questionmark">official documentation.</a></p>
+
+<p>Rails provides numerous conditions that can be used to validate data before they are saved into the data base. Rails also makes it very simple to implement validations. As an example:  </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location app/models/post.rb
+class Post < ActiveRecord::Base
+  belongs_to :User
+  has_many :comments
+  validates :title, presence: true, length: { minimum: 3 }
+end</code>
+</pre>
+
+<p>In this case, Active Record will perform validations over every post object that attempts to "hit" the database in order to ensure that, <strong>1. </strong>Has a title, and <strong>2.</strong> That the title is at least 3 characters long.</p>
+<p>If any of the validations fails Active Record will then populate the invalid object's errors array with the corresponding errors messages. These messages can be accessed with <code>post.error.messages</code>.</p>
+<p>In our example if the new <code>@post</code> object fails validation <code>@post.errors.full_messages</code> will display:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>["Title can't be blank", "Title is too short (minimum is 3 characters)"]</code>
+</pre>
+
+<p>This great usability feature allows us to easily display the errors to the users with only a bit of procedural coding.</p>
+

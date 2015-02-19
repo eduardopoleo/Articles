@@ -1,0 +1,115 @@
+<h4>Unit test.</h4>
+<p>Test different components in isolation. It is the closest to the real code. In rails: Models, views, helpers, routes</p> 
+
+<h4>Functional test</h4>
+<p>Test multiple component in collaboration. In rails: Controller. Usually it testes only one single request and response cycle.</p> 
+
+<h4>Testing important business process</h4>
+<p>Emulate some relevant user stories. It would be the equivalent of using the browser.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Setting up Rspec in rails</h4>
+
+<p>1) Install the Rspec gem into the development and the test environment.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#Gemfile
+group :development, :test do
+  gem 'rspec-rails'
+end</code>
+</pre>
+
+Then run bundle accordingly.
+
+<p>Generate the rails configuration files</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>rails g rspec:install</code>
+</pre>
+
+<p>This generates the following files:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>create  .rspec
+create  spec
+create  spec/spec_helper.rb</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Create the corresponding folders & files</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>spec/models/todo_spec.rb</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> Writing a simple test</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code> # spec/models/todo_spec.rb
+#Loads the rails environment
+require 'spec_helper'
+
+#all test are initiated with 'describe'
+describe Todo do
+  # The particle 'it' announce the test
+  it 'should saves it self' do
+    # Setting up the data to be tested
+    todo = Todo.new(task: 'cook dinner')
+    todo.save
+    # Asserting that the data was effectively saved into the database
+    expect(Todo.first.task).to eq('cook dinner')
+  end
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4.</span> Running the test</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#If we want to run all the tests in our app
+rspec
+# if we want to run this particular test
+rspec spec/models/todo_spec.rb</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">5.</span> Testing our model's methods</h4>
+
+<p>We can use Rspec to test/develop our model's methods. If for instance we would like to check whether or not our todos have description we could write up a function like this</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code># app/models/todo.rb
+class Todo < ActiveRecord::Base
+  def name_only?
+    description.blank?
+  end
+end</code>
+</pre>
+
+<p>The corresponding tests could be: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe Todo do
+  #..other code..
+
+  describe '#name_only' do
+    it 'should return true if the description is an empty string' do
+      todo = Todo.create(name: 'have dinner')
+      expect(todo.name_only?).to eq(true)
+    end
+
+    it 'should return true if the description is nil' do
+      todo = Todo.create(name: 'have dinner', description: '')
+      expect(todo.name_only?).to eq(true)
+    end
+
+    it 'should return false if the description is a non empty string' do
+      todo = Todo.create(name: 'have dinner', description: 'we need to eat before 3')
+      expect(todo.name_only?).to eq(false)
+    end
+  end
+end</code>
+</pre>
+
+
+
+
+
+
+

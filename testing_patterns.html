@@ -1,0 +1,206 @@
+<p>In my previous article I showed how to set up simple test suites for some familiar controller patterns. In this article I want to show how the same principles can be applied to build slightly more complicated controller patterns.</p>
+
+<p>On the Tealeaf Academy we implemented a queue feature in our main teaching app that resembles a lot the '+ My list' feature on Netflix.</p>
+
+<p> This feature allows the users to add videos they want to see in the future to their "My queue". The videos added are then listed on the 'My queue' page in the order the users added them. The users can also change the queue order, eliminate videos from the queue or play the videos.</p>
+
+<p>In this app the queue items are associated to videos and users in a 1:M relationship. A video can have many queue items and so does the user as long as they are not associated to the same video. </p>
+
+<p>I am going to go through the create and the update queue items which I thought were the most interesting on this exercise. </p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Create</h4>
+
+<p>This are the basic requirement for our create actions:</p>
+
+<ul>
+  <li>It should redirect to the queue_items path if the queue item is successfully created.</li>
+  <li>It should create a queue item.</li>
+  <li>It should create a queue item associated with a video.</li>
+  <li>It should create a queue item associated with a user.</li>
+  <li>It should place the newly created queue item last in the queue (highest order).</li>
+  <li>It should not add a video twice to the queue</li>
+  <li>It redirects to the sign_in_path if the user is not authenticated.</li>
+</ul>
+
+<p>With the requirements in mind we can start writing the test suite.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe 'POST create' do
+  let(:current_user) {Fabricate(:user)}
+  before {session[:user_id] = current_user.id}
+
+  it 'redirects to the queue index page' do
+    video = Fabricate(:video)
+    post :create, video_id: video.id 
+    expect(response).to redirect_to queue_items_path
+  end
+
+  it 'creates the queue item' do
+    video = Fabricate(:video)
+    post :create, video_id: video.id 
+    expect(QueueItems.count).to eq(1)
+  end
+
+  it 'creates a queue item associated with a video' do
+    video = Fabricate(:video)
+    post :create, video_id: video.id
+    expect(QueueItem.first.video).to eq(video)
+  end
+
+  it 'creates a queue item associated with a user' do
+    video = Fabricate(:video)
+    post :create, video_id: video.id
+    expect(QueueItem.first.user).to eq(current_user)
+  end
+
+  it 'puts the video last in the queue' do
+    video =  Fabricate(:video)
+    queue_item1 = Fabricate(:queue_item, user: current_user)
+    post :create, video_id: video.id
+    expect(video.queue_items.first.order).to eq(2)
+    # This forces the controller to assign an order to the items right after creating it 
+  end 
+
+  it 'does not add a video twice to the queue' do
+    video = Fabricate(:video)
+    queue_item1 = Fabricate(:queue_item, video: video, user: current_user) 
+    post :create, video_id: video.id
+    expect(QueueItems.count).to eq(1)
+  end
+
+  it 'redirects to the sing in path if the user is not authenticated' do
+    session[:user_id] = nil
+    video = Fabricate(:video)
+    post :create, video_id: video.id 
+    expect(response).to redirect_to sign_in_path
+  end
+end</code>
+</pre>
+<p>And these test produces the following controller test</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#queue_items_controller.rb
+def create
+  video = Video.find(params[:video_id])
+  QueueItem.create(video: video, user_id: current_user.id, order: queue_items_count) unless repeated_video?(video) 
+  redirect_to queue_items_path
+end
+
+private
+# This method ensures that the latest queue item created is placed last
+def queue_items_count
+  current_user.queue_items.count + 1
+end
+
+# This method checks that the array of queue_items for the current user does not include the video to be queued  
+def repeated_video?(video)
+  current_user.queue_items.map(&:video).include?(video)
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Update queue</h4>
+<p>As mentioned before we want to grant users the ability to reorder the queue. The requirements for the update queue action could be these:</p>
+<ul>
+  <li>It should redirect to the queue items page after updating the queue.</li>
+  <li>It should update effectively reorder the queue items.</li>
+  <li>It should order the queue only with consecutive numbers starting from 1.</li>
+  <li>It should not update if the users inputs a non integer in the order field.</li>
+  <li>It should flash a message indicating that the queue could not be updated.</li>
+  <li>It should redirect to the queue items page if the current user does not own the queue item he wants to update.</li>
+  <li>it should redirect to sign_in_path if the user is not authenticated.</li>
+</ul>
+
+<p>With all these requirements the test suite for the queue item action could look like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe 'POST update_queue' do
+  let (:current_user) {Fabricate(:user)}
+  before{session[:user_id]} = current_user.id
+
+  it 'redirects to the queue_items path' do
+    queue_item1 = Fabricate(:queue_item, order: 1)
+    queue_item2 = Fabricate(:queue_item, order: 2)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 2 }, {id: queue_item2.id, order: 1 }] 
+    expect(response).to redirect_to queue_items_path
+  end
+
+  it 'updates the queue items after the user inputs a new order' do
+    queue_item1 = Fabricate(:queue_item, order: 1)
+    queue_item2 = Fabricate(:queue_item, order: 2)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 2 }, {id: queue_item2.id, order: 1 }] 
+    expect(current_user.queue_items).to eq([queue_item2, queue_item1])
+    # This forces the queue items to be ordered by their 'order' attribute 
+  end
+
+  it 'normalizes the queue orders to always start at 1 and be consecutive integers' do
+    queue_item1 = Fabricate(:queue_item, order: 1)
+    queue_item2 = Fabricate(:queue_item, order: 2)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 42 }, {id: queue_item2.id, order: 34 }] 
+    expect(current_user.queue_items.map(&:order)).to eq([1, 2])
+  end
+
+  it 'does not update the queue if the user inputs a non integer order' do
+    queue_item1 = Fabricate(:queue_item, order: 1)
+    queue_item2 = Fabricate(:queue_item, order: 2)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 3.2 }, {id: queue_item2.id, order: 2 }] 
+    expect(current_user.queue_items.map(&:order)).to eq([1, 2])
+  end
+
+  it 'flash error if there is the order input is not valid' do
+    queue_item1 = Fabricate(:queue_item, order: 1)
+    queue_item2 = Fabricate(:queue_item, order: 2)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 3.2 }, {id: queue_item2.id, order: 2 }] 
+    expect(flash[:error]).to be_present
+  end
+
+  it 'does not change the queue item order if the user does not own the queue item' do
+    a_user = Fabricate(:user)
+    queue_item1 = Fabricate(:queue_item, order: 1, user: a_user)
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 2 }] 
+    expect(queue_item1.reload.order).to eq(1)
+  end
+
+  it 'redirects to the sign in path if the user is not authenticated' do
+    session[:user_id] = nil
+    post :update_queue, queue_items: [{id: queue_item1.id, order: 2 }] 
+    expect(response).to redirect_to sign_in_path 
+  end
+end</code>
+</pre>
+
+<p>This code can obviously be re-factored and split into different contexts but this format fits better on this article.</p>
+<p>This test suite produces a controller code like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#queue_items_controller.rb
+def update_queue
+  begin
+    update_queue_items    
+    normalize_queue_items_order
+  rescue ActiveRecord::RecordInvalid
+    flash[:error]='Invalid position number'
+  end
+  redirect_to queue_items_path
+end
+
+private
+def update_queue_items
+  ActiveRecord::Base.transaction do
+    params[:queue_items].each do |item| 
+      modified_item = QueueItem.find(item[:id])
+      modified_item.update_attributes!(order: item[:order], rating: item[:rating]) if modified_item.user == current_user
+    end
+  end
+end
+
+# The queue items are ordered by the order number
+# In the User model: has_many :queue_items, -> { order(:order) }
+def normalize_queue_items_order
+  current_user.queue_items.each_with_index do |queue_item, index| 
+    queue_item.update_attributes(order: index + 1)
+  end
+end </code>
+</pre>
+
+<p>Note how we need to make use of rails transactions so that none of the elements of the queue get updated if one possesses an invalid input.</p>
+<p>This is all I have to say for now! Happy coding.</p>

@@ -1,0 +1,10 @@
+We do not really want to send our mails using our gmail account because it has some limitations.
+Installing mailgun.  
+
+Now that we are using an external service to deliver mails it becomes necesary to use service to handle backgroud jobs there are several providers although we have decided to use sidekiq.
+
+Installing sudo apt-get install redis-server
+gemfile 'sidekiq'
+adding delay to the delivery
+starting the redis server redis-server
+start the sidekiq bundle exec sidekiq

@@ -1,0 +1,138 @@
+<p>This week I learned how to generate random tokens and send mails from a rails app and I am writing this post to have a quick "at hand" reference in the future. </p>
+<h3 style='padding-top:15px;'><i>Action Mailer</i></h3>
+
+<p>So let's imagine that we have already built a simple todo app and we want to send a confirmation mail to our users every time they create a todo. For this purpose we can use the <a href="http://guides.rubyonrails.org/action_mailer_basics.html" target="_blank">Rails built-in Action Mailer</a>.</p>
+
+<p>First we have to create our Action Mailer child class where we are going to manage all our mails functionalities.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#app/mailers/app_mailer.rb
+class AppMailer < ActionMailer::Base
+  def notify_on_new_todo(user,todo)
+    @todo = todo
+    mail from: 'info@mytodoapp.com', to: user.email, subject: "You created a new todo"
+  end
+end</code>
+</pre>
+
+<p>Mailers work similar to controllers in the sense that a mailer_action will render a corresponding app/views/mailer_name/mailer_action.html.haml view.  Nevertheless, in this case the "views" will contain the body of the email we are sending. Likewise, instance variables defined inside the mailer_action will also be available in the corresponding view. With this in mind we can then create our view.  </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#app/views/app_mailer/notify_on_new_todo.html.haml
+ %body
+   %p You have created a new todo!
+   %p This is your new todo #{@todo.name}</code>
+</pre>
+
+<p>Now we have to modify the todos create action so that it effectively sends out the mail every time the todos are created.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def create
+  @todo = current_user.todos.build(todos_params)
+  if @todo.save
+    AppMailer.notify_on_new_todo(current_user, @todo).deliver
+    flash[:notice] = 'Your task have been saved'
+    redirect_to todos_path 
+  else
+    render :index
+  end
+end</code>
+</pre>
+
+<p>By now every time we create a todo we should be able to see the email content by checking the server's log but we are not sending 'real' emails yet. If we want to see an approximation on how the email will look like once we start sending mails on production we can user the <code>letter_opener</code> gem.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#Gemfile
+group :development do
+  gem 'letter_opener'</code>
+end
+#run bundle install
+</pre>
+
+<p>And then we also have to add the following line to the development.rb file.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>config/enviroments/development.rb
+config.action_mailer.delivery_method = :letter_opener</code>
+</pre>
+
+<p>Then every time we send a mail while in our development environment a close-looking representation of the email will pop up on a new browser tab.</p>
+
+<p>Lastly, if we want our app to send real emails in production we have to do a bit more configuration prep. Supposing that we want to send our emails from a gmail account we need to paste the <a href="http://guides.rubyonrails.org/action_mailer_basics.html#action-mailer-configuration-for-gmail" target="_blank">following code</a> into the production.rb file.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#config/enviroments/production.rb
+config.action_mailer.delivery_method = :smtp
+config.action_mailer.smtp_settings = {
+  address:              'smtp.gmail.com',
+  port:                 587,
+  domain:               'example.com',
+  user_name:            'username',
+  password:             'password',
+  authentication:       'plain',
+  enable_starttls_auto: true  }</code>
+</pre>
+
+<p>We just have to fill in the username and password fields with the account info.</p>
+
+<h3 style='padding-top:15px;'><i>Tokens</i></h3>
+
+<p>Tokens are randomly generated strings that are very useful when you do not want some database critical information to show up on your application's url, (e.g ids). Tokens are also specially useful when implementing other features such as password resets, since they can easily be generated and discarded unlike other attributes like ids.</p>
+
+<p>So let's imagine that we are still working on our todo application and that for security reasons we do not want our users to know how many todos there are (which they could probably guess just by looking at the url).</p>
+<p>A simple way of fixing this it is adding a <code>:token</code> attribute to our todos and let our app find the todos by_token instead of using the id. We can start by adding the token column to the todos table. </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#db/migrate/#####_add_token_column_to_todos.rb
+class AddTokenToTodos < ActiveRecord::Migration
+  def change
+    add_column :todos, :token, :string
+    Todo.all.each do |todo| 
+      todo.token = SecureRandom.urlsafe_base64
+      todo.save
+    end
+  end
+end</code>
+</pre>
+
+<p>The each loop generates and stores tokens for all the existing todos in the database. If our database is already considerably big we should use SQL directly instead.</p>
+
+<p>Now we have to make sure that all the new records are assigned a token right when they are created:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#app/model/todo.rb
+class Todo < ActiveRecord::Base
+  #Some code..
+  before_create :generate_token
+  def generate_token 
+    self.token = SecureRandom.urlsafe_base64
+  end
+end</code>
+</pre>
+
+<p>The <code>SecureRandom.urlsafe_base64</code> is a <a href="http://www.ruby-doc.org/stdlib-1.9.3/libdoc/securerandom/rdoc/SecureRandom.html" target="_blank">ruby string generator</a>.</p>
+
+<p>In order to show the token and "hide" the todos id's every time the user goes to the show action we have to override the rails' <a href="http://apidock.com/rails/ActiveRecord/Base/to_param" target="_blank">to_param</a> method.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#app/model/todo.rb
+class Todo < ActiveRecord::Base
+  #Some code..
+  def to_param
+    token 
+  end
+end </code>
+</pre>
+
+<p>As indicated in the documentation this method returns a string used for the construction of the object's URL. By default it will return the string version of the object's id. Here we are overriding that behavior so that it uses the token attribute instead. As a consequence every time we use the named route <code>todo_path(@todo)</code> the information passed in the <code>params[:id]</code> will be the token attribute instead of the actual todo's id.</p>
+
+<p>Thus, we have to modify our show action so that it searches the todo using the token instead:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code> #app/controllers/todos_controller.rb
+ def show
+   @todo = Todo.find_by_token(params[:id])
+ end</code>
+</pre>
+
+<p>Hope you enjoyed these recipes! On my next post I will be talking on how to combine these two features to implement a "Forgot Password" functionality.</p>

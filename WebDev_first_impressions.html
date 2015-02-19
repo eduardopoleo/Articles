@@ -1,0 +1,28 @@
+<p>One of the most important web concepts I learned about in the first part of the <a href="http://www.gotealeaf.com/">Tealeaf course</a> was the statelessness nature of the HTTP protocol. This makes web programming a bit counterintuitive because the info stored in variables is magically gone as soon as the user hits the refresh button. </p>
+
+<p>But for me even more eye opening (and probably shocking) was the different nature of looping in web applications.</p>
+
+<p>In a procedural blackjack game if we want to ask to one of the players if he wants another card we would simple write some code like this (simplified pseudocode):</p>
+
+<pre>
+<code>while player_wants_card == true
+  player.gets_card
+  player_score = calculate_score() # break if player_score >= 21
+  Do you want another card?(true or false)
+  player_wants_card = player.answer
+end</code>
+</pre>
+
+<p>In web development such loop would look very different because it consist of a two step process where a controller and a view interchange information through a request/response mechanism, as shown below:</p>
+
+<ol>
+  <li>Player sees her hand and score on the UI (She has a score of 13). (View).</li>
+  <li>Player clicks the Hit! button on the UI to request another card. (View sends a POST request to Controller).</li>
+  <li>Controller takes a card from deck variable and passes it to the player’s hand variable and evaluate the player's newscore to 23. (Controller Action).</li>
+  <li>Controller sends all the updated info to the View including a signal that basically says “This is the new player info, and btw do not show the Hit! button anymore because the player’s score exceeded 21”. (Controller responds to the POST request)</li>
+  <li>Player sees his new hand and score but since her score is now 23, there is not Hit! button anymore on the UI (View) so the “loop” is broken. (Final View)</li>
+</ol>
+
+<p>This sort of thinking is different than regular programming and it takes a while to get use to it.</p>
+
+

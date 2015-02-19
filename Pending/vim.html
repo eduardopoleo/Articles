@@ -1,0 +1,116 @@
+
+
+to generate a controler
+
+:Rcontroller password_resets!
+:Rspec controller/password_resets_controller!
+
+:Rmodel test!
+:Rspec model/test!
+
+Both do exactly what you think they do
+I have found that vim is a really powerful editor, but it might be a little dunting at the beginning to get used to it's naegation and command based system. But on the other hand it gives you an unparalel freedom when it comes to your editing workflow.
+
+Vim modes
+
+Normal mode
+Insert mode
+Command mode
+
+
+Vim commands
+
+Mapping 
+map: work in normal, visual and select and operator pending mode
+map!: insert and command-line mode
+
+<p>I've been wanting to write this article for a while but it has been hard to say something useful about vim that has not been said before or that does not include pasting a 300 commands long cheatsheet.</p>
+
+<h3 style='padding-top:15px;'><i>Vim tutor</i></h3>
+<p>Like everyone else I started my vim journey using vimtutor. Vimtutor introduces you to the most fundamental vim concepts and commands. I could not remember much after going through the tutor for the first time (there is just so much content) but it gave me a good feel of for the editor. </p>
+
+<p>I came back to the tutor once I have been using vim for a while I realized that it actually teaches you about 95% of the editing commands you'll be using in your day by day development. Among some of the concepts the tutor goes trough are:</p>
+
+<ul>
+  <li>Vim's different modes</li>
+  <li>Many different editing task (appending, inserting, changing, copy/pasting, etc)/li>
+  <li>File Navegation</li>
+  <li>Quitting and saving files</li>
+  <li>The concept of OPERATOR + NUMBER + MOTION</li>
+  <li>Search</li>
+  <li>The vimrc file</li>
+</ul>
+
+<h3 style='padding-top:15px;'><i>Plugins</i></h3>
+<p>Vim is a really powerful tool on it's own  but plugins make your life much easier specially if you are doing something specific like rails. </p>
+
+<p>How to install them?</p>
+<p>Like everything in Vim there are several ways one can do this although repos owners tent to recomend using any of these two plugin managers: Pathogen or Vundle. I settled for Pathogen for no particular reason (probably because it was the first one I came accross with), and it has worked great so far so I have not had the need to switch, but I suggest you to also take a look Vundle because as I said it is also very popular.</p>
+
+<p>If you decide to use Pathogen all you have to do is to clone the plugin's repo into your ~/.vim/bundle directory and you will have it installed. Conversively, if you ever want to remove a specific plugin you just have to remove the corresponding plugin folder, and that's it it's gone!.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">File navigations plugins</span>header</h4>
+
+<p> As I intended to use Vim mostly for rails development, before actually doing editing I most concern with the directory navegation. Becuase after all, how can you confortably edit a file you do not have access to. Here is a list of plugins I usually use for file navegation.</p>
+
+<h4>NERDtree</h4>
+<p> This plugins triggers when typing <code>:NERDtree</code> and it displays a project navegation panel that shows up at the left side of the editor window (much like Sublime's files directory). The plugin allows you to navigate through the current project directory, add, remove and rename documents and also open files on a split.</p>
+
+<h4>CtrP</h4>
+<p>This plug-in triggers by pressing Ctr+P in normal mode you then type the files name and the return key and the file will be open in your current working panel. The plugin also give you some suggestions as you type. By default the file you are opening will replace the file you are currently working on but there are some commands that allow you to open new files on vertical or horizontal splits.</p>
+
+<h4>Vim rails </h4>
+<p>Vim rails is a very powerful plugin that among other things offers easy navegation through the rails directory. You can easily bring up a file just by typing <code>:Rfile_type key_word</code>. For instance, if you want to work on your user model or controller all you have to do is to type <code>:Rmodel user</code> or <code>:Rcontroler users</code> and hit the return key. This also applies to spec, migrations, mailers, layouts, views actually everything.</p>   
+
+<p>Vim rails also allows you to quickly generate files and then run them from withing the editor itself! which is pretty cool. For instance a commom workflow for me is to generate a migration by:  <code>:Rgenerate migration create_users</code> then <code>:Rmigrations create_users</code> to bring it to my current panel,  write a bit of code and finally <code>:Rake</code>. The <code>:Rake</code> command will run the migration from within the editor itself! </p>
+
+<p>You can also use <code>:Rake</code>to run test, see your routes etc. Vim rails offers a lot of other functionalities but these are the ones I use most frequently. </p>
+
+<h3 style='padding-top:15px;'><i>.vimrc</i></h3>
+
+<p>After installing these plugins I had pretty much solved my file navigation needs I could start focussing on improving my file editing workflow. Nevertheless, it was really annoying that some triggers I was using very frequently (e.g NERDtree) were really long and difficult to type, that's when I discovered the .vimrc file.</p>
+
+<p>The .vimrc file is vims configuration file and it usullay lives on your home directory. There you can basically set some defaults for your day to day vim usage, set abreviation, map key and comand combinations to your liking etc. I solved the specific problem of the NERDtree by <code>ca tr NERDTree</code> this basically sets an abreviation so that writting tr is equivalent to typing the full NERDtree command (only when I am on command mode).</p>
+
+<p>Other things that I have set up on the .vimrc include: automatic indentation to 2 spaces, quick copy/pasting to the and from the clipboard automatic bracket, parenthesis... closing among other defaults.</p>
+
+<p>When I just had discovered the .vimrc I imidiatelly started overriding lots of the default commands that I thought were not very useful to me. But as I'm reading and learning more about vim I've been returnig back to the "factory settings". Nonetheless, if you are reading this and you are still planning to get started with vim I highly encourage you to experiment like I did. This will allow you to better understand why things were initially put that way.</p>
+
+<h3 style='padding-top:15px;'><i>Text editing plugins</i></h3>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span>vim-endwise</h4>
+
+<p>This plugin was written by Tim Pope, the same who wrote Pathogen, and vim-rails and...  if you start using vim specially for rails you will hear his name a lot, like a lot. This plugin basically autocompletes the end statemets of loops, blocks, if, etc. It also keeps the corresponding indentation level as it should be.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>tcomment</h4>
+<p> This plug in allows you to toogle blocks of comments. This was specially useful for me specilly in what if? sceneraios where I already had working code but I just wanted to put it aside for a minute. I do not remember which the default trigger was but right now I have it set up with ctr-/ just like I have it with sublime.</p>
+
+<h4>YouCompleteMe</h4>
+<p> YouCompleteMe is a great plugin that presets suggestions as you type if it finds that you have written similar words in the same document. You can then decide to autocomplete by hitting the tab key. The plugin works really fast and it does not hinder your vision or a ey.</p>
+<p>At this point my editor was almost set, The last thing a I needed was a simple way to write and use  my own snippets.</p>
+
+<h4>Ultisnip</h4>
+<p>For snippets on vim basically found two different options: Snipmate and Ultisnip.</p>
+
+<p>I believe Snipmate was the first one to come out but it stop being mantained until some other dudes decided to recently re take on the project. I tried but was not really convinced by it becasue first it had you intalling three plugins ins (or dependencies not sure what their purpose were) in order to work and second, it had problems when creating snippets when indentation was key (ex Haml snippets). </p>
+
+<p>So at the end I ended up moving to Ultinip and have not lookk back since. Firts of all it has a really nice documentation that includes introductory videos that get you started on the use of the plugin right away. Also the snippets are perfectly place no indentation issues as snipmate. Finally, and best of all it has a really it is compatilbe with YouCompleteMe is a way that as you write on top of just autocompleting with variables names etc, YouCompleteMe will also suggest snippets names!!! so that you can easily bring then to your document!</p>
+
+<h4>TDD</h4>
+
+<p>The latest addition to my snippets has been the vim-rspec plugig which allows me to easily run the specs from within the edito. I know i mentioned that you could also do that using the vim rails plugin but this spec gives you more flexibility. You can run the spec you are currently working on (space-s), you can run all the specs on your current file (space-t), the last spec you ran (space-l) or simple run the whole test suite (space-a). </p>
+
+<h3 style='padding-top:15px;'><i>Tmux</i></h3>
+<p>By this point when I open my computer my routine was this: open a terminal, naviage to  my root directory and open the editor, repeat this three more times for three more times for the console, database and server.  </p>
+
+<p>Moreover everytime I wanted to switch between some of this windows I had to either click it with the mouse on the lower bar (lame) or toggle using the Alt-tap which is the method i prefer. The problem with this is that is not really obvious which tab is the want you are looking for and many times i found me self going to the full panel of options a few times until if got the window I wanted.</p>
+
+<p>Tmux help you manage this issue by grouping all your terminal windows within a session (which is dispaly as a single window). From within this session you can easily swap to different terminals by pressing some convinietn triggers commands. Also Tmux layout different terminal outputs in the same window. Tmux as vim is also very customizable and also has it own configuration file.  Also and probably most importantly you can automate all this configurations using bash scritps, On my next article I am going to show how to do this. </p>
+
+<h3 style='padding-top:15px;'><i>Where I'm at right now.</i></h3>
+<p>Right now I feel that I am slightly more productive using vim that I was using the other editors for a couple of reasons: I can seamlessly run almost all the comands I used commoly without having to leave the editor and I have a much better and acurate text selection using the visual mode that I had using the horrible moustpad on my computer.</p>
+
+<p>Although it took me a while to get there and I completely understand people that think that is not worth it I have spent quite a few hours </p>
+
+<p>I think this time will gradually pay of a get better with vim editing taks.</p>
+<p>I just recenly adquired practical a </p>

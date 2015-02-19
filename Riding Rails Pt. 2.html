@@ -1,0 +1,89 @@
+<p>This is a continuation of Riding Rails! Pt. 1</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#4.</span>Controllers & Views</h4>
+
+<p>We can now create the corresponding controllers for our blog application and we will also define some actions.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location => controllers/posts_controller.rb 
+class PostsController < ApplicationController
+  
+  def index
+     @posts = Post.all
+  end
+  
+  def show
+    @post = Post.find(params[:id])
+  end
+
+end</code>
+</pre>
+
+<p>The instance variables <code>@posts</code> and <code>@post</code> will contain an array of all the posts objects present in the data base (<code>Post.all</code>) and the post with the PRIMARY_KEY [:id] (<code>Post.find(params[:id])</code>), respectively.</p> 
+
+<p>As we can see querying information from the database is rather easy in rails and can be done using ruby directly!!, without having to write a single SQL line.</p>
+
+<p>As default, rails controller actions will render a view with the same name located in the correct folder. Additionally, all the information stored in instance variables in the controllers actions will be available in the corresponding views.</p>
+
+<p>The corresponding views for our posts_controller are the following:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'> <code><xmp><!--File location => app/views/posts/index.html.erb-->
+<h1>Listing Posts</h1>
+
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Text</th>
+  </tr>
+ 
+  <% @posts.each do |post| %>
+    <tr>
+      <td><%= post.title %></td>
+      <td><%= post.content %></td>
+    </tr>
+  <% end %>
+</table>
+
+<!--File location => app/views/posts/show.html.erb-->
+<p>
+  <strong>Title:</strong>
+  <%= @post.title %>
+</p>
+ 
+<p>
+  <strong>Text:</strong>
+  <%= @post.content %>
+</p></xmp></code></pre>
+
+<small><p style='margin-bottom:15px;'><strong>Note:</strong> I needed to scape the browser html processing in order to show this code. That's why the formatting is a bit odd.</p></small>
+
+<p>We can see how in the index.html.erb file we iterate over all the objects in the <code>@posts</code> array and then displayed their attributes in a table-like format</p>
+
+<p>In the show.html.erb we do not need to do that because we are only displaying the attributes of the an specific post with PRIMARY_KEY [:id]. </p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#5.</span>Routing & Resources</h4>
+
+<p>Lastly, we have to set the appropriate routes so that the application knows what controller#action to go when the user inputs a certain url in the browser</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code> #File location config/routes.rb
+Blog::Application.routes.draw do
+  get '/posts', to: 'post#index'
+  get '/posts/:id', to: 'post#show'
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#6.</span> Tightening Everything Together</h4>
+
+<p>If the user for instance enters <i>www.myblog.com/posts</i> on the browser search bar the following steps will follow:</p>
+<ul>
+  <li>The routes will take the GET '/posts' request  to the post_cotroller index action, as specified in the routes file.</li>
+  <li>The index action will ask the model <code>Post</code> for all the objects posts in the database. </li>
+  <li>The model <code>Post</code> will query for all the posts records in the table <code>posts</code> and will "convert them" to ruby objects with setters and getters methods for each of its attributes (columns).</li>
+  <li>The index action will store these objects in the instance variable <code>@posts</code> and then will render the corresponding index.html.erb view.</li>
+  <li>The index.html.erb view will iterate through the collection of objects and will finally display its attributes in a table like format for the user to see.</li>
+</ul>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#7.</span>Others</h4>
+<p>During lesson 1 we also learned more about 1:M and M:M associations and rails partials. But I am going to stop here and move on to lesson 2 for the moment :-). Thanks for reading! </p>
+

@@ -1,0 +1,140 @@
+<p>Every once in a while I start a fresh new project and it takes me a while to get everything up and running. Not because it is extremely difficult but because I usually have to google a great deal of the set up process. Therefore ... this post!</p>
+
+<p>I am going to skip the user/role creation for postgresql. I am still not very sure what the steps for a proper set up are, although <a href="http://stackoverflow.com/questions/9987171/rails-3-2-fatal-peer-authentication-failed-for-user-pgerror">this</a> stackoverflow question it's been helpful for me in the past.</p>
+
+<p>Anyhow once the user creation is out of the way we can proceed to create our new app: </p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>rails new myapp --database=postgresql</code>
+</pre>
+
+<p>Then we can configure the data base by modifying the <code>database.yml</code> file.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>development:
+  adapter: postgresql
+  encoding: unicode
+  database: myapp_development
+  pool: 5
+  username: myapp
+  password: password1
+
+test:
+  adapter: postgresql
+  encoding: unicode
+  database: myapp_test
+  pool: 5
+  username: myapp
+  password: password1</code>
+</pre>
+
+<p>We can then create the databases:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>rake db:create db:migrate</code>
+</pre>
+
+<p>At this point we should run the server to verify that everything is working fine:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>rails s</code>
+</pre>
+
+<p>Now we can proceed to set up the right gems. For a project that includes testing this is a good set up</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#gemfile.rb
+source 'https://rubygems.org'
+ruby '2.1.1'
+
+gem 'bootstrap-sass'
+gem 'coffee-rails'
+gem 'rails', '4.1.1'
+gem 'haml-rails'
+gem 'sass-rails'
+gem 'uglifier'
+gem 'jquery-rails'
+gem 'pg'
+gem 'bcrypt'
+gem 'bootstrap_form'
+gem 'fabrication'
+gem 'faker'
+gem 'turbolinks'
+
+group :development do
+  gem 'thin'
+  gem "better_errors"
+  gem "binding_of_caller"
+end
+
+group :development, :test do
+  gem 'pry'
+  gem 'pry-nav'
+  gem 'rspec-rails', '2.99'
+end
+
+group :test do
+  gem 'database_cleaner', '1.2.0'
+  gem 'shoulda-matchers'
+  gem 'capybara'
+  gem 'launchy'
+end
+
+group :production do
+  gem 'rails_12factor'
+end</code>
+</pre>
+
+<p>After which we should run <code>bundle update</code>.</p>
+<p>We can now set up the bootstrap. We start by changing the application.css file to include the scss extension.</p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>application.css.scss</code>
+</pre>
+
+<p>Now we import the Bootstrap styles by adding this to the application.css.scss file</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>@import "bootstrap-sprockets";
+@import "bootstrap";</code>
+</pre>
+
+<p>it is important to REMOVE all the <code>//= require</code> from the file, as specified in the bootstrap saas <a href="https://github.com/twbs/bootstrap-sass">documentation</a>.</p>
+
+<p>Then we should require Bootstrap Javascript.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#application.js
+//= require jquery
+//= require jquery_ujs
+//= require turbolinks
+//= require bootstrap-sprockets
+//= require_tree .</code>
+</pre>
+
+<p>In order to verify that everything is working properly we can just set a route to something like this:</p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>root 'welcome#index'</code>
+</pre>
+
+ <p>And after creating the corresponding <code>welcome_controller.rb</code> we can paste the following code on the index.html.haml just to check that everything is in place </p>
+
+ <pre style='margin-top:15px; margin-bottom:15px;'>
+ <code>%nav.navbar.navbar-inverse.navbar-fixed-top{:role => "navigation"}
+  .container
+    .navbar-header
+      %button.navbar-toggle{"data-target" => "#bs-example-navbar-collapse-1", "data-toggle" => "collapse", :type => "button"}
+        %span.sr-only Toggle navigation
+        %span.icon-bar
+        %span.icon-bar
+        %span.icon-bar
+      %a.navbar-brand{:href => "#"} Start Bootstrap
+    #bs-example-navbar-collapse-1.collapse.navbar-collapse
+      %ul.nav.navbar-nav
+        %li
+          %a{:href => "#"} About
+        %li
+          %a{:href => "#"} Services
+        %li
+          %a{:href => "#"} Contact</code>
+ </pre>
+
+ <p>And if that works we are ready to go!</p>

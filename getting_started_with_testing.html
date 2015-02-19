@@ -1,0 +1,189 @@
+h3 style='padding-top:15px;'><i>Advantages of TDD</i></h3>
+
+<p>At the very beginning I failed to understand why TDD was necessary. I found that (for very simple features) one had to write probably 20 lines of test code in order to output a single line of 'real' working code.</p>
+<p>But then as we ramped up the features' complexity during the course, it became clear to me how TDD could improve the development process. These are some of the advantages I found after I started understanding it's purpose.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Improves your development work-flow</h4>
+<p>Having to think about all your feature's requirements and edge cases before actually coding, gives you a better perspective of your app. It also lays down a really nice development path that is usually characterized by small incremental steps.</p>
+<p>With so many different files, programming languages, models etc, interacting with each other it is easy (at least for me) to get lost. So this approach of gradually enhancing your app by taking little steps feels a lot like walking on the little Red Riding Hood path in the middle of the forest :).</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Saves you time! </h4>
+<p>Really it does! Specially on browser refreshes. When I developed my app at the end of the second course I found my self refreshing the browser over and over trying to verify that my changes in code actually corresponded to the desired output.</p>
+<p>This situation was much less than ideal. Relying so heavily on browser refreshes as a debugging tool was really breaking my 'zen'. I wondered if pro devs actually had to endure this kind of pain. At the end I just concluded that I was not experienced enough to actually foresee the output of larger changes of code (this might still be the case) and that was why I had to keep going to the browser so much.</p>
+<p>On the 3rd course it felt almost like sorcery seeing how by running a series of simple test cases we only needed to go to the browser ONCE! just as a final check.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> Maintainability</h4>
+<p>Again due to the larger complexity of the system we are dealing here (several files, languages, tools etc), whenever one implements a new feature it is possible to break something else! Having a test suite that you can run with a key stroke and verify that everything is still in place... is just amazing!</p>
+
+<h3 style='padding-top:15px;'><i>TDD process</i></h3>
+
+<p>After a painful process I came to the obvious realization that in order to carry out TDD you need to have a clear picture of your feature's requirements. Once you have established this then your controller actions (in the case of functional testing) will speak for themselves.</p>
+
+<p>In this section I am going to characterize three very common and basic controller actions. Our app consist of a simple todo app that have many users. Each todo have name and description attributes and are associated in a 1:M relationship with a user.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1. </span>Index</h4>
+
+<p>So our simple index action should probably achieve these three things:</p>
+
+<ul>
+  <li>It should render a template to the browser in order to display the information requested.</li>
+  <li>It should ensure that this template displays all the todos created at the moment.</li>
+  <li>It should redirect to the sign in path if the user is not authenticated.</li>
+</ul>
+
+<p>With these features in mind we can easily (and almost organically) set the different tests cases:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe TodosController do
+  describe 'GET index' do
+    let(:current_user) {Fabricate(:user)}
+    before {session[:user_id] = current_user.id}
+
+    it 'renders the index template' do
+      get: index
+      expect(response).to render_template :index
+    end
+
+    it 'sets the @queue_items instances variable' do
+      queue_item1 = Fabricate(:queue_item)
+      queue_item2 = Fabricate(:queue_item)
+      get: index 
+      expect(assigns(:queue_items)).to match_array([queue_item1, queue_item2])
+    end
+
+    it 'redirects to the sign_in_path if the user is not authenticated' do
+      session[:user_id] = nil
+      get :index      
+      expect(response).to redirect_to sign_in_path
+    end 
+  end
+end</code>
+</pre>
+
+<p>These tests cases produced the following code on the controller side.</p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#todos_controller.rb
+before_action :require_user
+  def index
+    @queue_items = current_user.queue_items
+  end
+end</code>
+</pre>
+
+<h3 style='padding-top:15px;'><i>New</i></h3>
+
+<p>Again our simple new action must ensure three things: </p>
+
+<ul>
+  <li>It should render a template to the browser containing the new todo form.</li>
+  <li>It should set a new todo object to be passed into a model-backed form.</li>
+  <li>It should redirect to the sign in path if the user is not authenticated.</li>
+</ul>
+
+<p>We can proceed to create the corresponding test suite:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code> describe 'GET new' do
+  user = Fabricate(:user)
+  session[:user_id] = current_user.id
+
+  it 'renders the new template' do
+    get :new
+    expect(response).to render_template :new 
+  end
+
+  it 'sets the @todo variable' do
+    get :new
+    assigns(:todo).should be_new_record
+    assigns(:todo).should be_instance_of(Todo)
+  end
+
+  it 'redirects to the sign in path if the user is unauthenticated'
+    session[:user_id] = nil
+    get :new
+    expect(response).to redirect_to sign_in_path
+  end
+end</code>
+</pre>
+
+<p>The following controller code is then produced:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def new
+  @todo = Todo.new
+end</code>
+</pre>
+
+<h3 style='padding-top:15px;'><i>Create</i></h3>
+
+<p>Finally lets explore our create action, which could probably have the following requirements: </p>
+<ul>
+  <li>It should redirect to somewhere (in this case the index action) if the object is successfully created. </li>
+  <li>It should create the object if the input is valid. </li>
+  <li>It should set a flash notice if the object was created.</li>
+  <li>It should not create the object if the input(s) are not valid.</li>
+  <li>It should render the new template if the object was not created.</li>
+  <li>It redirects to the sign_in_path if the user is not authenticated.</li>
+  <li>It should create todos that are associated with the current user.</li>
+</ul>
+
+<p>With this requirements in mind we can write the following test code: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe 'POST create' do
+  let(:current_user) {Fabricate(:user)}
+  session[:user_id] = current_user.id
+
+  it 'redirects to the index action' do
+    post :create, todo: {name: 'Laundry', description: 'Do laundry at 6 pm'}
+    expect(response).to redirect_to todos_path
+  end
+
+  it 'creates a todo object if the input is valid' do
+    post :create, todo: {name: 'Laundry', description: 'Do laundry at 6 pm'}
+    expect(Todo.count).to eq(1)
+  end
+
+  it 'it associates the todos with the current user' do
+    post :create, todo: {name: 'Laundry', description: 'Do laundry at 6 pm'}
+    expect(Todo.first.user).to eq(current_user)
+  end
+  
+  it 'sets a flash notice if the todo was created' do
+    post :create, todo: {name: 'Laundry', description: 'Do laundry at 6 pm'}
+    expect(flash[:notice]).to be_present
+  end
+
+  it 'does not create the todo if there is not name' do
+    post :create, todo: {description: 'Do laundry at 6 pm'}
+    expect(Todo.count).to eq(0)
+  end 
+
+  it 'renders the template if the todo name was not defined' do
+    post :create, todo: {description: 'Do laundry at 6 pm'}
+    expect(response).to render_template :new
+  end
+end</code>
+</pre>
+
+<p>And this produces the expected: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def create
+  @todo = Todo.new(todo_params.merge!(:user, current_user))
+  if @todo.save
+    flash[:notice] = 'Your todo have been created'
+    redirect_to todos_path
+  else
+    render :new
+  end
+end
+
+private
+
+def todo_params
+  params.require(:todo).permit(:name, :description)
+end </code>
+</pre>
+
+<p>Thank you for reading!</p>

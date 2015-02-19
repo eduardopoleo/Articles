@@ -1,0 +1,239 @@
+<p>As explained in the <a href="http://guides.rubyonrails.org/association_basics.html#polymorphic-associations">rails docs</a>, in a polymorphic association a model can belong to several other models on 1:M associations. This allows for more concise and better sorted database tables as seen <a href="http://d3ncao0pifc37i.cloudfront.net/images/polymorphic_tables.jpg">here</a>.</p>
+
+<p>As shown in the link, instead of having a dedicated  foreign key column for each of the possible "actionable" models, we now have an actionable_type and a corresponding actionable_id.</p>
+
+<p>In our application we used polymorphic associations to implement the vote action on our post and comment objects. Thus, our action model was <code>Vote</code> and the votables models were <code>Comment</code> and <code>Post</code>. As usual I will break down the development procedure in a series of steps.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Creating the votes table</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>rails g migration create_votes
+# File Location: db/migrate/20141015170040_create_votes.rb
+class CreateVotes < ActiveRecord::Migration
+  def change
+    create_table :votes do |t|
+      t.boolean :vote
+      t.integer :user_id
+      t.string :voteable_type
+      t.integer :voteable_id
+      t.timestamps
+    end
+  end
+end</code>
+</pre>
+
+<p>We will use the boolean attribute <code>:vote</code> to determine whether a vote is positive or negative. In addition, we will have a  <code>:votable_type</code> attribute that will indicate which voteable model are we voting on, and a  <code>:voteable_id</code>  attribute that will correspond the primary key of the specific voteable we are voting on.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Models</h4>
+
+<p>The vote model will have a regular 1:M relationship with its creator. On the other hand, the comment and the post models will be our voteables and will possess a polymorphic association with the vote model.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code># File Location: app/models/vote.rb
+class Vote < ActiveRecord::Base
+  belongs_to :creator, foreign_key: 'user_id', class_name: 'User'
+  belongs_to :voteable, polymorphic: true
+
+  validates_uniqueness_of :creator, scope: :voteable
+end
+
+# File location: app/models/user.rb
+class User < ActiveRecord::Base
+  .
+  #Some Code
+  .
+  has_many :votes
+end
+
+# File location: app/models/comment.rb
+class Comment < ActiveRecord::Base
+  .
+  #Some Code
+  .
+  has_many :votes, as: :voteable
+end
+
+# File location: app/models/post.rb
+class Post < ActiveRecord::Base
+  .
+  #Some Code
+  .
+  has_many :votes, as: :voteable 
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> Routes</h4>
+
+<p>Since the vote will naturally belong to its corresponding comments or post we would like to produce urls that contain the information of its parent object. We can then use the <code>member</code> command nested within the voteable route to express a coherent object hierarchy:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#File location: config/routes.db
+PostitTemplate::Application.routes.draw do
+  .
+  # Some other code
+  .
+
+  resources :posts, except: [:destroy] do
+    member do
+      post :vote
+    end
+      
+    resources :comments, only: [:create] do
+      member do
+        post :vote
+      end
+    end
+  end
+end
+
+# Then in the console rake routes | grep vote
+vote_post /posts/:id/vote                           posts#vote
+vote_post_comment /posts/:post_id/comments/:id/vote comments#vote</code>
+</pre>
+
+<p>We see how the urls are mapped to the vote action within the corresponding voteable!! eliminating the need for a VotesController.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4.</span> Controllers</h4>
+
+<p>This is the code for the vote actions in both controllers:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code># File location: app/controllers/posts_controller.rb
+class PostsController < ApplicationController
+  .
+  # Some other code
+  .
+
+  def vote
+    @post = post.find(params[:id])
+    @vote = Vote.create(creator: current_user, voteable: @post, vote:     params[:vote])
+
+    if @vote.save
+      flash[:notice] = 'Your vote was added'
+    else
+      flash[:error] = "You can't vote twice on the same item"
+    end    
+    redirect_to :back
+  end
+end
+
+# File location: app/controllers/comments_controller.rb
+class CommentsController < ApplicationController
+  .
+  # Some other code
+  .
+  def vote
+    @comment = Comment.find(params[:id])
+    @vote = Vote.create(creator: current_user, voteable: @comment, vote:   params[:vote])
+
+    if @vote.save
+      flash[:notice] = 'Your vote was added'
+    else
+      flash[:error] = "You can't vote twice on the same item"
+    end    
+    redirect_to :back
+  end
+end</code>
+</pre>
+
+<p>We are effectively creating and saving the votes in the vote actions. Rails will deduce the <code>user_id</code>, the <code>voteable_type</code>and <code>votable_id</code> attributes from the current_user and the <code>@comment</code> objects provided. The <code>vote</code> attribute will be sent in <code>params</code> from the views.</p>
+
+<small><strong>Note:</strong> current_user is an controller level method that determines what user is currently logged in depending on the <code>session[:user_id]</code>. This was explained in a previous post about authentication.</small>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">5.</span> View</h4>
+
+<p>Finally, we would like to implement the vote feature in the UI an example would be this</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code><xmp><% obj.each do |comment| %>
+  <div class="row">
+    <div class="well span0 text-center">
+      <% if logged_in? %>
+        <%= link_to(vote_post_path(post, vote: true), method: 'post' ) do %>
+          <i class = 'icon-arrow-up'></i>
+        <% end %>
+        <br/>
+      <% end %>
+        <%=post.total_value%> votes
+      <% if logged_in? %>
+        <br/>
+        <%= link_to(vote_post_path(post, vote: false), method: 'post' ) do %>
+          <i class = 'icon-arrow-down'></i>
+        <% end %>
+      <% end %>
+    </div>
+  .
+  #some Code
+  .
+  </div>
+<%end%></xmp></code>
+</pre>
+
+<p>Note that the route helper <code>vote_post_path</code> takes a <code>post</code> object from which rails will inferred the corresponding <code>id</code>: required in the url. The <code>vote:</code> parameter is also provided but in this case is hard coded.</p>
+
+<p>Thanks for reading!</p>
+
+
+Vote migration
+
+t.boolean vote: boolean
+t.integer user_id
+t.string voteable_type
+t.integer voteable_id
+timestamps
+
+1 side
+has_many :votes, as: :voteable 
+
+Many side (votes model)
+belongs_to :voteable, polymorphic: true 
+
+
+ROUTES:
+
+Option 1: One is creating a vote resource with only a create action
+
+resources :votes, only: [:create]
+POST 'votes' => VotesController#create
+ In this one we need two pieces of info. The voteable and the voteable_id
+ We do not need the user_id because that will be available in the session hash.
+
+ADV: this is recommended if you are having lots of voteable stuff and you do not want to 
+expose hundreds of routes.
+
+Option 2: Create a vote actions in the voteable.
+
+POST '/post/3/vote' => PostsController#vote
+POST '/comment/4/vote' => CommentsController#vote
+
+ADV: this is simpler but will exposed more routes. 
+it is interesting because we are mapping the votes to another resource controller. 
+
+To achieve this route one has to use 
+
+resource :post, except: [:destroy] do
+  # this will be available to every member of the post family
+  # /posts/id/vote
+  member do
+    post :vote
+  end
+
+
+  # This will be available to all the family
+  # /posts/archives 
+  collection do
+    get :archives
+  end
+end
+
+
+ IMP NOTE: Iterating through and array. 
+Once the iteration is done and the browser has interpreted all the info. The link_to parameters info is hardcoded in the html produced.
+
+
+Tangent: How to start a project?
+- Mock up and features first.
+- Probably a bit of html
+- Route design and Model design 
+- Wireup the controllers and everything with rials.
+

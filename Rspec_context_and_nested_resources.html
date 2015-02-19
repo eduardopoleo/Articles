@@ -1,0 +1,51 @@
+<p>When we have several possible scenarios we can define <code>contexts</code> in order to create more comprehensive test code.</p>
+
+<p>Let's assume that we are developing a video streaming application and we want to allow the users to write reviews for the videos. We already created the respective models associations and templates but we still have to write up some code for the reviews_controller, specifically the create actions</p>
+
+<p>Since only the logged in users are allowed to write reviews we will have a fairly amount of possible cases to consider, which sets a perfect scenario for the use of contexts.</p>
+
+<p>So we can divide the create action spec as follows:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#spec/controllers/reviews_controller_spec.rb
+require 'spec_helper'
+describe ReviewsController do
+  describe 'POST create' do
+
+    context 'authenticated user' do
+      context 'valid inputs' do
+        it 'creates review'
+        it 'creates a review associated with the video'
+        it 'creates a review associated with the user'
+        it 'redirects_to video show page'
+      end
+
+      context 'invalid inputs' do
+        it 'does NOT create the review'
+        it 'renders show video path'
+        it 'sets the variable @video'
+        it 'sets the variables @ reviews'
+      end
+    end
+
+    context 'unauthenticated user' do
+      it redirects to the signin path
+    end
+  end
+end</code>
+</pre>
+
+<p>We are now set out to write our test code. The code for the 'creates review' could look like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>it 'creates review' do
+  # Setting the video
+  video = Fabricate(:video)
+  # Issuing the request
+  post :create, review: Fabricate.attributes_for(:review), video_id: video.id
+  expect(Review.count).to eq(1)
+  post
+end</code>
+</pre>
+
+<p>Note that we need to pass in the <code>video_id </code>due to the 1:M model association </p>

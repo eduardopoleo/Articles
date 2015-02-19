@@ -1,0 +1,34 @@
+<p>When you code in matlab you save yourself from having to do millions of dull manual calculations. But when you write a piece of bash code you save your self from having to make a zillion of dull clicks and meaningless typing.</p> 
+<p>It’s incredible how just a little bit of bash can drastically improve your workflow. Here are my favorites:</p> 
+
+<h4 style='padding-top:12px; font-weight: bold;'> Aliases = win! + happiness </h4>
+<p>Aliases allowed you to literally create you own convenient alias to an otherwise long and complicated command as an example:</p>
+ 
+<pre>
+<code>alias gp='git push origin master'</code>
+</pre>
+
+<p>But even better aliases can be concatenated by using the <code>;</code> operator in order to create a chain of commands that need to be run in an specific order.</p>
+ 
+<pre>
+<code>alias cdt='cd; cd Documents/Tealeaf/'</code>
+</pre>
+
+<p>The previous code will work regardeless the directory I am working on, becuase it will first cd to the root directory with <code>cd</code>  and then it will get me to the Tealeaf directory with <code>cd Document/Tealeaf/</code> </p>
+
+<h4 style='padding-top:12px; font-weight: bold;'> Simple functions</h4>
+
+<p>You can also create functions that take parameters (such as folder names) and make it perform different actions.</p>
+
+<pre>
+<code>function mcd() {
+	mkdir -p "$1" && cd "$1";
+}</code>
+</pre>
+ 
+<p>This function creates a directory with a certain name and immediately cd into it, which something I do fairly often.</p>
+ 
+<p>I gotta thank Stephen for this great <a href="http://stephenroth.com/2014/07/14/bash-profile/">post</a> on the topic.</p>
+
+
+

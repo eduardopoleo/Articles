@@ -1,0 +1,329 @@
+<p>I went to my first ruby workshop two days ago and had the opportunity to join an awesome workshop about TDD. Although I was kind of lost during the workshop I learned a lot afterwards when I reviewed the exercise by myself. In this article I am going to show how I gradually developed my solution for the <a href="https://github.com/k00ka/string-kata" target="_blank">String-Kata</a>.</p>
+
+<p>I am going to list the requirements and then I am going to show the necessary working code to make the corresponding test pass. For the sake of simplicity (and in order to avoid senseless repetition) I am going to skip the majority of the Rspec code. You can check it out <a href="https://github.com/eduardopoleo/string-kata" target="_blank">here</a> though.</p>
+
+<p>In this Kata we want to build a simple calculator that adds up a series of numbers that are inputted as strings. The full problem statement is given <a href="https://github.com/k00ka/string-kata" target="_blank">here</a>. Let's get going with the problem.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> If I give you an empty string, I want your calculator to answer 0.</h4>
+
+<p> As mentioned in the workshop, the idea behind the TDD work-flow is to make the smallest change to the working code to make the test pass. So this specific requirement can be easily met by:</p>
+
+<pre name="code" class="ruby" style='margin-top:15px; margin-bottom:15px;'>
+<code>module StringCalculator
+  def self.add(string)
+    0
+  end
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.1</span> If I give you “0” I want your calculator to produce the value 0.</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" || string == "0"
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.2</span> If I give you “5” I want your calculator to produce the value 5.</h4>
+
+<p>This requirement allow us to generalize a bit more in our method</p>
+
+<pre name = "code" class="rb" style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  string.to_i 
+end</code>
+</pre>
+
+<p>This code will convert any string into it's corresponding integer value. Also if the string starts with a letter or any other character other than a number it will return 0 (zero). This detail will be important later.</p> 
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> If I give you “1,2”, it should produce the value 3, and “7,9” should produce the value 16.</h4>
+
+<p>We see that for both test cases the values to add are located in the positions 0 and 2 of the string, so the following code complies with the requirements:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  string[0].to_i + string[2].to_i
+end</code>
+</pre>
+
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4.</span> If I give you two strings of digits separated by a comma, I want your calculator to answer with the sum of those numbers. E.g "12,45" should equal 57 and "42,159" should equal 201.</h4>
+
+<p>Our previous code falls short in this case because now the coma can fall in any position of the string. We need to use the <code>split()</code> method to parse out the values that we want to add and then transform them into integers.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  string.split(",").map(&:to_i).reduce(:+)
+
+  #After .split(",") --> ["12", "45"]
+  #After .map(&:to_i)--> [12, 45]
+  #After .reduce(:+) --> 57
+end</code>
+</pre>
+
+<p>The <code>map()</code> method iterates over the array of strings and applies the <code>.to_i</code> method to each element. This is equivalent as saying:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>split_string.each do |number|</code>
+  number.to_i
+end
+</pre>
+
+<p>Finally the <code>reduce(:+)</code> method just "reduce" the whole array into an expression which in this case corresponds to the sum of its elements.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">5.</span> If I give you any number of strings of digits separated by commas, I want your calculator to answer with the sum of those numbers. E.g “1558,2,2442”.</h4>
+
+<p>Since the split method seeks and find the "," in the string regardless of its position, the aforementioned code is general enough to cover this case as well! So we do not really need to add more code for this requirement, Yei!. </p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">6.</span> Sometimes I’ll give you a newline character instead of a comma. You should treat it the same as a comma. For instance “1\n2,3” should produce the value 6.</h4>
+<p>Running the previous code this time will give us a value of 4. As shown below:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#After split(",") --> ["1\n2", "3"]
+#After .map(&:to_i) --> [1,3] 
+#After reduce(:+) --> 4</code>
+</pre>
+
+<p>So one easy solution is to substitute the <code>"\n"</code>for commas before they are being split</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  string.gsub("\n", ",").split(",").map(&:to_i).reduce(:+)
+  # After gsub("\n", ",") --> "1,2,3"
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">7.</span> On second thought, maybe we should make it so delimiters can be set in the input. Whenever I give you two slashes followed by a character on the first line of the input, use that character as the delimiter. For instance, “//;\n2;5” should produce the value 7.</h4>
+
+<p>Since now the delimiter can be any symbol <code>split(",")</code> is not enough to ensure proper parsing of the string inputted. We need to generalize our function so that it finds the delimiter before splitting the string.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  delimiter = ","
+
+  if string.include?("//")
+    delimiter = string[2]
+  end
+
+  string.gsub("\n", delimiter).split(delimiter).map(&:to_i).reduce(:+)
+end</code>
+</pre>
+
+<p>Looking for the delimiter on the position [2] of the string is probably not the most general solution but it is a very simple way to make our current test pass, and that's what we want.</p> 
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">8.</span> I forgot about negative numbers. They’re a problem, so let’s just throw an exception when you see one in the input.</h4>
+<p>I will post here the Rspec code here because the syntax is a bit unconventional, as it requires the use of <code>{}</code> as opposed to <code>()</code></p>
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>it 'raises an exception when the string contains a negative number' do
+  expect{StringCalculator.add("//:4:-145677")}.to raise_error(RuntimeError,'You have negative numbers')
+end </code>
+</pre>
+
+<p>We have to scan the whole string and make sure that we do not have negative numbers on it. Since there is literally infinite possible negative numbers that could potentially inputted we have to make use of regular expressions. A simple code could be this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  delimiter = ","
+
+  if string =~ /-\d+/
+    raise "You have negative numbers"
+  end
+
+  if string.include?("//")
+    delimiter = string[2]
+  end
+
+  string.gsub("\n", delimiter).split(delimiter).map(&:to_i).reduce(:+)
+end</code>
+</pre>
+
+<p>I am going to break down the regular expression used previously:</p>
+<ul>
+  <li>All regular expressions in ruby are enclosed between <code>/ /</code>.</li>
+  <li>The <code>-</code> will find the negative sign in the string.</li>
+  <li><code>\d</code> by it self matches the first single digit present in the string. </li>
+  <li><code>+</code> matches one or more of the previously defined pattern.</li>
+</ul>
+
+<p>So reading all together the expression <code>/-\d+/</code> basically finds all the digits <code>\d+</code> that show up after the minus sign <code>-</code>.</p>
+
+<p>Finally the <code>=~</code> returns the initial position where the match was found if match exist, otherwise it returns nil. For example <code>"//:45:-234" =~ /-\d+/</code> returns 6.</p>
+
+<p>We can see how our once simple add function is getting long and ugly, so it is time to force some separation of concerns. We can break it down into into 3 different parts: One that performs the addition, one that calculates the delimiter and one that validates the input.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  validate(string)
+  delimiter = cal_delimiter(string)
+  string.gsub("\n", delimiter).split(delimiter).map(&:to_i).reduce(:+)
+end
+
+def self.cal_delimiter(string)
+  delimiter = ","
+  if string.include?("//")
+    delimiter = string[2]
+  end
+  delimiter
+end
+
+def self.validate(string) 
+  if string =~ /-\d+/
+    raise "You have negative numbers"
+  end
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">9.</span> The exception message would be a good place to watch for problems, so let’s put a list of the negative values in there, but only when there are multiple negatives in the string.</h4>
+
+<p>In order to find and store multiple appearance of a patter we can use the <code>scan()</code> method, which does precisely that. As an example:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>"4556-344-5436-56".scan(/-\d+/)
+-->["-344", "-5436", "-56"]</code>
+</pre>
+
+<p>We can then modify our validate method to account for multiple appearance of negative numbers:</p> 
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.validate(string) 
+  neg_numbers = string.scan(/-\d+/)
+  if neg_numbers.size == 1
+    raise "You have a negative number"
+  elsif neg_numbers.size > 1
+    raise "You have these negative numbers: #{neg_numbers}"
+  end
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">10.</span> Sometimes the input gets a little garbled, so let’s ignore any numbers larger than 1000.</h4>
+
+<p>The easiest way imho to comply with this requirement is to check the numbers once they have been parse out. For this purpose we can use the <code>select()</code> method and pass in a block where we specify the conditions that we need: </p>
+
+<p>A simple example of the use of select is:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>["123", "1234", "12345"].select{|num| num.size <= 3 }
+--> ["123"]</code>
+</pre>
+
+<p>Our add method will now look something like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  validate(string) 
+  return 0 if string == ""
+  delimiter, string = cal_delimiter(string)
+  string.gsub("\n", delimiter).split(delimiter).select{|num| num.size <= 3 || num == '1000'}.map(&:to_i).reduce(:+)
+end</code>
+</pre>
+
+<p>We have to make sure to include the number 1000 since the requirement asks us to only ignore the numbers "larger" than 1000.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">11.</span>Can we make it so delimiters can be multiple characters long? Let’s agree the first line will have square brackets around the delimiter like this: “//[delimiter string]”</h4>
+
+<p>This is a more challenging requirement because of these two factors: </p>
+
+<p>1) <strong>It requires a more complex regular expression.</strong> </p>
+
+<p>We can use the following expression to extract the delimiter: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>string.scan(/\/\/\[(.+)\]/)</code>
+</pre>
+
+<p>We can break down the regex in the following way:</p>
+<ul>
+  <li><code>/../</code> They enunciate the beginning and the end of a regular expression in ruby.</li>
+  <li><code>\/\/</code> Since the forward slashes are part of the pattern we are targeting we need to scape them by putting the <code>\</code> before. This basically tells ruby "Hey! these specific // are part of the string we want to parse so treat them as normal characters and do not close or open regex". </li>
+  <li><code>\[\]</code> Similar to the above the <code>[]</code> have some dedicated uses in regex. We need to scape them so that they are treated as part of our pattern.</li>
+  <li><code>(.+)</code> This will match every single character <code>.+</code> that is enclosed <code>( )</code>. The enclosing limits in this case are the brackets.</li>
+</ul>
+
+<p>So knowing this we can change the cal_delimiter method as shown below:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.cal_delimiter(string)
+  delimiter = ","
+  if string.include?("//")
+    if string =~ /\/\/\[.+\]/
+      delimiter = string.scan(/\/\/\[(.+)\]/).flatten[0]
+    else 
+      delimiter = string[2]
+    end
+  end
+  delimiter
+end</code>
+</pre>
+
+<p>With this code we can effectively extract the delimiter from a string like this "//[a?>]4a?>1a?>1", which will produce "a?>", although our final result will yield 2 instead of the expected 6. That leads to our second complication.  </p>
+
+<p> 2) <strong>There is a " ] " between the delimiter and the first number to be added.</strong> </p>
+<p>This messes up the split and other calculations, as shown below:</p>
+
+<pre style='margin-top:15px; string.split().map(&:to_i).reduce(:+)rgin-bottom:15px;'>
+<code>"//[a?>]4a?>1a?>1".split("a?>")
+--> ["//[", "]4", "1", "1"]
+_.map(&:to_i)
+--> [0, 0, 1, 1]</code>
+</pre>
+
+<p>And now we see why the result was 2. In order to avoid this we can cut out the delimiter definition if it is given in a bracket form by slicing the string after the bracket closes. We can calculate at what position this will be by adding 4 to the delimiter size (to account for "//[]").</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def self.add(string)
+  return 0 if string == "" 
+  validate(string)
+  delimiter = cal_delimiter(string)
+
+  if string =~ /\/\/\[.+\]/
+    string = string[(delimiter.size + 4)..-1]
+  end
+
+  string.gsub("\n", delimiter).split(delimiter).select{|num| num.size <= 3 || num == "1000"}.map(&:to_i).reduce(:+)
+end</code>
+</pre>
+
+<p>So this is it. This code complies with all the 11 requirements. Nevertheless, the fact that we are checking for the type of delimiter definition twice (in the delimiter method and in the add method) is plain redundant. So we could probably move the first bit of string manipulation into the delimiter method and have it serve a modified string to the add function. If we do that the final full code will look like this: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>module StringCalculator
+  def self.add(string)
+    return 0 if string == "" 
+    validate(string)
+    string, delimiter = cal_delimiter(string)
+    string.gsub("\n", delimiter).split(delimiter).select{|num| num.size <= 3 || num == "1000"}.map(&:to_i).reduce(:+)
+  end
+
+  def self.cal_delimiter(string)
+    delimiter = ","
+    if string.include?("//")
+      if string =~ /\/\/\[.+\]/
+        delimiter = string.scan(/\/\/\[(.+)\]/).flatten[0]
+        string = string[(delimiter.size + 4)..-1]
+      else 
+        delimiter = string[2]
+      end
+    end
+    [string, delimiter]
+  end
+
+  def self.validate(string) 
+    neg_numbers = string.scan(/-\d+/)
+    if neg_numbers.size == 1
+      raise "You have a negative number"
+    elsif neg_numbers.size > 1
+      raise "You have these negative numbers: #{neg_numbers}"
+    end
+  end
+end</code>
+</pre>
+
+<p>I hope you enjoyed this problem as much as I did!</p>
+

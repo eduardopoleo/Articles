@@ -1,0 +1,119 @@
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Create directory and files</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>spec/controllers/todos_controller_spec.rb</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Create the test for the corresponding controller</h4>
+
+We have a simple controller for our todo application 
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>class TodosController < ApplicationController
+  def index
+    @todo = Todo.new
+    @todos = Todo.all
+  end
+
+  def new
+    @todo = Todo.new
+  end
+
+  def create
+    @todo = Todo.new(todos_params)
+
+    if @todo.save
+      flash[:notice] = 'Your task have been saved'
+      redirect_to root_path
+    else
+      render :index
+    end
+  end
+
+  private
+
+  def todos_params
+    params.require(:todo).permit!
+  end
+end</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Index action</h4> 
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe TodosController do
+  describe 'GET index' do
+    it 'sets the @todos variables' do
+      cook = Fabricate(:todo) 
+      sleep = Fabricate(:todo) 
+
+      get :index
+      assigns(:todos).should == [cook,sleep]
+    end
+
+    it 'renders the index template' do
+      get :index
+      response.should render_template :index
+    end
+  end
+end</code>
+</pre>
+
+<p> Note that we need to issue the corresponding request <code>get :index</code>. The <code>assings(:todos)</code> just sets the instance variable <code>@todos</code></p>
+<p>We can also assert that the response effectively renders the template that we want <code>response.should render_template :index</code>.</p>
+
+<p>We could also use this syntax <code>expec(assigns(:todos)).to eq [cook,sleep]</code> and <code>expect(response).to render_template :index</code>. In fact Rspec developers favor this syntax.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>New action</h4>
+
+<p>The test code for the new action could look like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe 'GET new' do
+    it 'sets the @todo variable' do
+      get :new
+      assigns(:todo).should be_new_record
+      assigns(:todo).should be_instance_of(Todo)
+    end
+    it 'renders the new template' do
+      get :new
+      response.should render_template :new
+    end
+  end</code>
+</pre>
+
+<p>Note that there are all sort of matchers. <a href="http://www.relishapp.com/rspec/rspec-expectations/docs/built-in-matchers">Here </a>is a more comprehensive list </p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3. </span>Create actions</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>describe 'POST create' do
+    it 'creates an input to be saved' do
+      post :create, todo: {name: 'cook', description: 'I like cooking'}
+
+      Todo.first.name.should == 'cook'
+      Todo.first.description.should == 'I like cooking'
+    end
+
+    it 'redirects to index if the input is valid' do
+      post :create, todo: {name: 'cook', description: 'I like cooking'}
+      response.should redirect_to root_path
+    end
+
+    it 'does not save a record if invalid' do
+      post :create, todo: {description: 'I like cooking'}
+      Todo.count == 0
+    end
+
+    it 'renders the index template if the input is invalid' do
+      post :create, todo: {description: 'I like cooking'}
+      response.should render_template :index
+    end
+  end</code>
+</pre>
+
+<p>Again, we need to issue the corresponding request (POST request). In this case we also need to pass in the information to be used by the controller <code>todo: {name: 'cook', description: 'I like cooking'</code>.</p>
+
+<p>Note how we are using the single assertion principle by only utilizing a matcher per case.</p>
+

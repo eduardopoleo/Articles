@@ -1,0 +1,28 @@
+<p>Collections and members allows us to create urls and path that will better describe the functionality of our resources. We can easily implemented them by typing: </p> 
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>resources :todos, only: [:index, :new, :create] do
+  # For a search collection of todos
+  collection do
+    get 'search', to: 'todos#search'
+  end
+  # For highlighted todos  
+  member do
+    post 'highlight', to: 'todos#highlight'
+  end
+end</code>
+</pre>
+
+<p>This will produce the following routes:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>search_todos GET  /todos/search(.:format)        todos#search
+highlight_todo GET  /todos/:id/highlight(.:format) todos#highlight
+         todos GET  /todos(.:format)               todos#index
+               POST /todos(.:format)               todos#create
+      new_todo GET  /todos/new(.:format)           todos#new
+</code>
+</pre>
+
+<p>We are using a collection to create a route to display the search results of our todo's search method. We are also creating a highlight route specifically for the 'members' of the class todo that are highlighted. The latter will require a dynamic element (:id). </p>
+

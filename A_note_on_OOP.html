@@ -1,0 +1,16 @@
+<p>When I started learning OOP I struggled to see how instances of different classes could ever share information amongst them. Well it happens that objects can actually be created as instances variables from within other bigger “wrapper” objects that serve as a playground where all the classes instantiated can share information.</p>
+ 
+<p>As an example, on the Tealeaf course we created 3 simple  games using OOP. The games were rock,paper,scissors, tic-tac-toe and blackjack. Although the games were very different in nature they shared a common  important  pattern: A wrapper class which I usually called Game.</p>  
+
+<pre>
+<code>class Game
+attr_accessor :player, :hand, :deck
+end</code>
+</pre>
+
+<p>This “master” class contained instances of all previously declared classes, such as <code>@player</code>, <code>@board</code>, <code>@hand</code> etc, and in here these instances could interact and pass information to each other. This was probably one of the most important pieces of knowledge I got from this course.</p>
+  
+<p>I remember having read phrases along the lines of “objects can contain other objects” in introductory OOP theory, but this is the sort of things that you do not really make sense until you do it yourself.</p>
+
+<p style ='font-size: 13px;'> <strong>NOTE</strong>: One cool feature of ruby is this piece of code: attr_accessor. This command allows you to condense the getter and setters methods for instance variables in one simple line. <a href="http://www.gotealeaf.com/books/ruby/read/classes_and_objects_part1#statesandbehaviors">The Tealeaf Academy introductory guide</a> has a great section on this.</p> 
+ 

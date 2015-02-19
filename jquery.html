@@ -1,0 +1,153 @@
+<p>I used a little bit of Ajax when building my personal app at the end of the  <a href="http://www.gotealeaf.com/curriculum#!rails">second course</a></p>
+
+<p>The app consisted of a simple to do app that let you create labeled projects, add tasks with deadlines and record your progress.  <a href="to-do-project.herokuapp.com">Here</a> is the link.</p>
+
+<p>In order to implement the features I wanted I had to go a bit beyond of what was explained in the course. This <a href="https://www.youtube.com/watch?v=5xEHK13u5Kc">episode of rails cast</a> was really useful.</p>
+
+<p>I noticed when building the app that I used Jquery to achieve three different things:</p>
+<ol>
+  <li>Add interactivity to the site</li>
+  <li>Create Ajax responses</li>
+  <li>Integrate a calendar widget</li>
+</ol>
+
+<p>I'll review briefly how I implemented each of these features.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Add interactivity</h4>
+<p>In the to-do app we can create projects which can contain any number of tasks. All tasks will always be visible even if they are already checked as completed . This way we can track the project's history and progress.</p>
+<p>That being said, this situation can get messy if the list of tasks is long. So we need find a way to toggle the completed tasks visibility so that we can focus on the pending tasks when necessary.</p>
+
+<p>As we can see in the projects show page, each task is stored as a row of the task table. The columns will correspond to certain attributes of the task (Status, description, deadline, etc). The html for a completed task could probably look like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code class="language-html" data-lang="html"><span class="nt">&lt;tr</span> <span class="na">class=</span><span class="s">"success task-completed"</span> <span class="na">id=</span><span class="s">'row-task-68'</span><span class="nt">&gt;</span>
+  # ..Some code 
+<span class="nt">&lt;/tr&gt;</span></code></pre>
+
+<p>Note that all our completed tasks will have the class <code>"task-completed"</code>, so all we have to do is to use Jquery to toggle the visibility of all the elements containing this class.</p>
+
+<p>A simple way to accomplish this is by using a checkbox. The UI effect would be: When the checkbox is unchecked the completed tasks should be visible. When checkbox is checked the completed tasks should NOT be visible. The code for the checkbox can look like this: </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'><code class="language-html" data-lang="html"><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"hide-completed"</span><span class="nt">&gt;</span>
+  <span class = "nt">&lt;input</span><span class="na"> type=</span><span class="s">"checkbox"</span><span class="na"> id=</span><span class = "s"> "checkbox-hide"</span><span class ="">&gt;</span>
+  Hide completed tasks
+<span class = "nt">&lt;/form&gt;</span></code></pre>
+
+<p>Now we just simply need to use JQuery to wire up the checkbox with the task-completed rows and toggle their visibility. We can do that by simple writing the following:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>// app/assets/javascripts/simple_effects.js
+$('#checkbox-hide').click(function() {
+  $('.task-completed').toggle();
+});</code></pre>
+
+<p>The code itself it's almost self-explanatory. Every time the checkbox with id 'checkbox-hide' is clicked all the tags with class 'task-completed' will "toggle" their visibility. So simple yet so nice!</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> AJAX Responses</h4>
+
+<p>We use AJAX to update certain content in our views without having to do a full page reload. For our to-do app we want to use AJAX to create a new task, save it and then prepend it to the task table.</p>
+
+<p>This is a little different than just updating a counter such as a facebook like or a post vote, because we have to parse the information from the newly created task and display it with the right format so that it properly fits in the task table.</p>
+
+<p>The first thing we have to do is to let the new_task form know that we intent to issue an Ajax request when we submit. In rails all we have to do is to add <code>remote: true</code> to the form, as shown below. </p>
+
+<pre style="margin-top:15px; margin-bottom:15px;">
+<code><span class ="nt">&lt;div</span> <span class = "na">id=</span><span class = "s">"new_task"</span><span class="nt">&gt;</span>
+  <%=form_for [project, task], remote: true do |f| %>
+    <span class ="nt">&lt;div</span> <span class = "na">class=</span><span class = "s">"form-group"</span><span class="nt">&gt;</span>
+      <%=f.label :description  %>
+      <%=f.text_field :description, class: "form-control"%>
+    <span class ="nt">&lt;div&gt;</span>
+    <span class ="nt">&lt;div</span> <span class = "na">class=</span><span class = "s">"form-group"</span><span class="nt">&gt;</span>
+      <%=f.label :deadline%>
+      <%=f.text_field :deadline, class: "form-control", id: "date"%>
+    <span class ="nt">&lt;div&gt;</span>
+    <%=f.submit action, class: "btn btn-info" %>
+  <%end%> 
+<span class ="nt">&lt;div&gt;</span></code>
+</pre>
+
+<p>Then we have to write the corresponding instructions in the create action of the task controller.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>def create
+  #..some code..
+
+  respond_to do |format|
+
+    format.html do 
+      if @task.valid?
+        flash[:notice] = "Your task has been successfully created"
+        redirect_to project_path(@project)
+      else
+        render 'projects/show'
+      end
+    end 
+
+    format.js 
+  end
+end</code>
+</pre>
+
+<p>The <code>respond_to</code> block contains the different possible ways to handle the response. For instance if the client does not have javascript enabled the server will respond with a standard "save" pattern. If the client is ok with an Ajax response the empty format.js block, by convention, will render the create.js.erb template under the tasks views template folder. For our example the template could probably look like this</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code><%if !@task.valid? %>
+  alert(" Your task must have a description of at least 3 characters long!")
+<%else%>
+  $('#task-table').prepend("<%= j render 'task', task: @task, project: @project%>");
+  $('#new_task')[0].reset();
+<%end%></code>
+</pre>
+
+<p>If the new task fails validation an alert will pop up, else the task template will be rendered with the information of the new @task, and the resulting html will be prepended to the "#task-table" that contains all the tasks</p>
+
+<p>Rendering the task partial just ensure that the newly created task info will be presented in the format that we want, in this case, as a row of the the #task-table, as seen below.</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code><span class ="nt">&lt;tr</span> <span class = "na">id=</span><span class = "s">"row-task-<%=task.id%>"</span><span class="nt">&gt;</span>
+  <span class ="nt">&lt;td</span>
+    <%= task.description %>
+  <span class ="nt">&lt;/td&gt;</span>
+  <span class ="nt">&lt;td</span>
+    <%= task.created_at.strftime("%b %d, %Y")%>
+  <span class ="nt">&lt;/td&gt;</span>
+  <span class ="nt">&lt;td</span>
+    <%= task.deadline.strftime("%b %d, %Y") if task.deadline%>
+  <span class ="nt">&lt;/td&gt;</span>
+<span class ="nt">&lt;/tr&gt;</span></code>
+</pre>
+
+<p>Finally <code>$('#new_task')[0].reset();</code> just resets the new_task form after the task is created.</p>
+
+<p>This little trick of rendering partials is very handy when we need to update chunks of html instead of a number, icon, etc.</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span>Jquery UI</h4>
+
+<p> <a href="http://jqueryui.com/">JQuery UI</a> has a lot of cool widgets and functionalities that are super easy to implement and can considerably enhance the user experience.</p>
+<p>We will use the JqueryUI calendar widget to set the tasks deadlines in our to do application.</p>
+
+<p>First we have to hook up the JqueryUI library to our application. For this we can simply copy and paste the JqueryUI link from the <a href="">google hosted libraries</a> in the head of our application.html.erb</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code><span class ="nt">&lt;script</span> <span class = "na">src=</span><span class = "s">""//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js""</span><span class="nt">&gt;</span>
+<span class ="nt">&lt;/script&gt;</span></code>
+</pre>
+
+<p>Then we have to set the id of the field where we want to input the task deadlines to 'date' ,(I am still a bit puzzled as to why it would not work properly with other ids), as we saw in the task form code shown above.</p>
+
+<p>Finally we can set some properties for the datepicker like this:</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>$('#date').datepicker({ 
+  showAnim: "fadeIn",
+  minDate: 0,
+  dateFormat: "yy-mm-dd"
+});</code>
+</pre>
+
+<p>This will add a fade-in fade-out effect, set the minimum selectable date to the current date and change the date format to the rails datetime type default.</p>
+
+<p>Happy coding</p>
+
+
+l

@@ -1,0 +1,45 @@
+<p>The Fabrication and Faker gem combo allows us to automate the creation of multiple instances of our models. This is a great time saver when one have to create tests or seed the database</p>
+<p>In order to set the combo we need to:</p>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1. </span>Install Gems</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>#gemfile
+gem 'Fabrication'
+gem 'Faker'</code>
+</pre>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>Create the corresponding directories and files</h4>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code># spec/fabricators/todo_fabricators.rb
+Fabricator(:todo) do
+  name {'cooking'}
+  # if we want to associate an user object to the todo 
+  user
+end</code>
+</pre>
+
+<p>Now if we want to set random attributes we can use the fakers modules</p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>Fabricator(:todo) do
+  name { Faker::Lorem.words(5).join(' ')} 
+  description (Faker::Lorem.paragraphs(2))
+  user
+end</code>
+</pre>
+ 
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3. </span>Set the variables</h4>
+<p>Now we can just simple create random instances of Todo by </p>
+
+<pre style='margin-top:15px; margin-bottom:15px;'>
+<code>todo = Fabricate(:todo)</code>
+</pre>
+
+
+
+
+
+
+

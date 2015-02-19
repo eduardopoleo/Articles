@@ -1,0 +1,68 @@
+
+<p>I have been programming in ruby for few months now. Initially  I just coded some  <a href="https://projecteuler.net/">Project Euler</a>   problems but now I am using ruby quite often for the <a href="http://www.gotealeaf.com/">Tealeaf Academy</a> projects.</p> 
+
+<p>I am starting to get confortable with the language but I must admit that I had a few surprises at the beginning. Here I am sharing some:</p>
+
+<h4 style='padding-top:12px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">#1.</span> Where are my functions??.. Ah.Methods ... what? </h4>
+<p>In Ruby "methods" are used to encapsulate tasks or behaviors, much like functions in other programming languages (Python, Matlab). They are also defined in a similar way.</p>
+<pre style='margin-top:12px;'>
+<code>def method_name() 
+  "Some Code"
+end</code>
+</pre>
+<p>So it is probably just a naming convention that Rubyist adopted for some reason, other than that I do not see any relevant difference in their <strong>FUNCTION</strong>ality compare to functions :).</p>
+
+<h4 style='padding-top:12px; font-weight: bold;'=><span style = "color:#7D8B31; font-size:18px;">#2.</span> What's wrong with the good old fashion <code>for</code> statement?</h4>
+
+<p>In order to go through all the elements of an array, hash or string  Rubyist usually use the “each” method.  As shown below:</p>
+<pre>
+<code>Array.each do |element| 
+  if element == "pretty"
+    puts element
+  end
+end</code>
+</pre>
+
+<p>This is somewhat convenient because it saves you the time of having to expresively calculate the length of the array, as I have done in numerous ocasions when using other languages.</p>
+<p>But what if we just want to repeat an operation a certain number of times. We can still use the each method in combination with ruby ranges e,g <code>(1..3)</code>, no problem. But if we want to count backwards instead, flipping the range <code>(3..1)</code> won't work! One has to use the <code>downto()</code>method to get the work done.</p>
+<table style="width:100%; margin:15px 0 15px 0;">
+  <tr>
+    <th align="center">Counting Forward</th>
+    <th align="center">Counting Backwards</th>
+  </tr>
+  <tr>
+    <td style='padding:0 15px 0 0;'>
+<pre>
+<code>(1..3).each do |number| 
+  p number
+end
+
+=> 1 2 3 </code>
+</pre>
+    </td>
+    <td>
+<pre>
+<code>3.downto(1) do |number| 
+  p number
+end
+
+=> 3 2 1 </code>
+</pre>
+    </td>
+  </tr>
+</table>
+
+<p>Ohh well, I guess counting <code>downto(1)</code> makes more “sense” semantically than “for-ing from 3 to 1”, but it’s a bit counterintuitive if one has some previous programming experience.</p>
+<p>For more on this topic check <a href="http://www.railsrocket.com/looping-backwards-in-ruby">this</a> out.</p>
+
+<h4 style='padding-top:12px; font-weight: bold;'=><span style = "color:#7D8B31; font-size:18px;">#3.</span> What's wrong with the good old fashion <code>while</code> statement?</h4>
+<p>From what I have seen so far the literal <code>while</code> loop is still more used in ruby than its <code>for</code> counterpart, nevertheless it has <a href="http://www.tutorialspoint.com/ruby/ruby_loops.htm">many other variations</a>  that I had not seen before. </p>
+<p>One of my favorites is the <code>begin</code> loop that allows you to iterate through the loop at least one time before checking if a certain condition is met.</p>
+
+<pre>
+<code>begin 
+  "some code that will run until condition is met"
+end until condition </code>
+</pre>
+
+Well those are some of my impressions of ruby as a newcomer to the language. Share yours!
