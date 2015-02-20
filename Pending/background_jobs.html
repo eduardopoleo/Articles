@@ -1,10 +1,25 @@
-In the application I'm building I had to set up third party software in order to handle my email sending. I also had to set up it as a background job because usually the delivery takes a couple of minutes which can be very detrimental for the user experience if the user is forced to wait all that time before being able to keep using the app.
+In one of my <a href="http://eduardo-blog.herokuapp.com/articles/27" target="_blank">previous articles</a> I showed how to set up rails mailers from a personal gmail account. This might me ok for a small personal app but if we are expecting an increased traffic or we want to make sure that our emails get delivered, it's best to load this off to a specialized third party vendor such as <a href="http://www.mailgun.com/" target="_blank">mailgun</a>.
 
-In the course we used a sidekiq. Sidekiq can handle multiple processes using threads which allows it to save memory and performe better than other background job solutions.s. 
+In order to set up mailgun in heroku we just need to install their <a href="https://addons.heroku.com/mailgun?utm_campaign=search&utm_medium=dashboard&utm_source=addons" target="_blank">mailgun addon</a> and then add the following <a href="https://devcenter.heroku.com/articles/mailgun#sending-emails-via-smtp" target="_blank">code</a> to our production enviroment configuration.
 
-web server calls into the background so if the service is slow or down the user experience won't be impacted directly
+```ruby
+ActionMailer::Base.smtp_settings = {
+  :port           => ENV['MAILGUN_SMTP_PORT'],
+  :address        => ENV['MAILGUN_SMTP_SERVER'],
+  :user_name      => ENV['MAILGUN_SMTP_LOGIN'],
+  :password       => ENV['MAILGUN_SMTP_PASSWORD'],
+  :domain         => 'yourapp.heroku.com',
+  :authentication => :plain,
+}
+ActionMailer::Base.delivery_method = :smtp
+```
+The enviromental variables are going to be automatically set by heroku and the mail gun addon so we do not have to worry about them.
 
-As explain in railscasts' <a href="http://railscasts.com/episodes/366-sidekiq?view=asciicast" target="_blank">episode 366</a> sidekiq uses redis to manage it's queue so we need to install this first. Redis recommends compiling from source as explained in their official <a href="http://redis.io/topics/quickstart" target="_blank">website</a>, but I decided to use the good ol' <code>sudo apt-get install redis-server</code>. 
+The problem of loading off reponsabilities on third party vendors is that we have no cotrol over their activity which, sometimes might slow down or even break for several <a href="http://blog.mailgun.com/what-happened-yesterday-and-what-we-are-doing-about-it/" target="_blank">reasons</a>. Since rails can only handle one request at the time this can seriously disrupt our users' experience. Thus, it is desirable to move third party activity to a background job and let our web server provide continouse feedback to our users.   
+
+In the <a href="https://www.gotealeaf.com" target="_blank">Tealeaf Course</a> we used sidekiq to handle the background job in our applications. As explain in railscasts' <a href="http://railscasts.com/episodes/366-sidekiq?view=asciicast" target="_blank">episode 366</a> sidekiq uses redis to manage it's queue so we need to install it first.
+
+Redis recommends compiling from source as explained in their official <a href="http://redis.io/topics/quickstart" target="_blank">website</a>, but I decided to use the good ol' <code>sudo apt-get install redis-server</code>. 
 
 After that we need to to add sidekiq to our project by
 
@@ -51,11 +66,86 @@ Now to test that everything is working properly locally we need to start the fol
 If you are using the letter_opener gem you should be able to see the email sent in the browser.
 
 Now things get interesting when we move this process to production because we will also need to keep these two processes running in parallel on the heroku server. 
+We need then to tell heroku to run both processes and the way we do that is through the Procfile. Our Procfile could look like something like this:
 
+We first need to add the <a href="https://addons.heroku.com/redistogo?utm_campaign=search&utm_medium=dashboard&utm_source=addons" target="_blank">Redis To Go</a> heroku add-on to our application. Then we need to tell heroku which processes it must run when starting our application. The way we do this is by declaring all the processes and their respective dyno type on the <a href="https://devcenter.heroku.com/articles/procfile" target="_blank">Procfile</a>. For our simple application the Procfile could look like this.  
 
+```Ruby
+web: bundle exec rails server -p $PORT
+worker: bundle exec sidekiq
+```
+At these point it is important to understand what a Heroku dyno is. According to the Heroku's <a href="https://devcenter.heroku.com/articles/dynos" target="_blank">guides</a>
 
+<blockquote>
+  "A dyno is a lightweight linux container that runs a single user-specified command."
+</blockquote>
 
+Thus, our current project set up will require at least two dynos running in parallel, which according to <a href="https://www.heroku.com/pricing" target="_blank">heroku's pricing</a> guide will cost us approximately $34.50/month. This is a fair amount considering the quality of service provided by Heroku, but if we are only practicing and toying around we probably want a cheaper approach. 
 
+Riding unicors in Heroku land.
 
+Again according to the heroku documentation 
 
+<blockquote>
+  The Unicorn web server lets you run any Rails application concurrently by running multiple Ruby processes in a single dyno.
+</blockquote>
 
+What this means is that we can use the unicorn server to run both our web a sidekiq processes without having to use two dynos, although this is more like a hack or a side effect. In principle, Unicorn and similar web servers were created to make a more efficient use of dyno resources, specially when using frameworks like Rails that by default can only handle one request at the time. 
+
+To get started with unicorn we first need to install the unicorn gem 
+
+```Ruby
+gem 'unicorn'
+```
+
+Then you need to create a unicorn.rb configuration file. Than can look similar to this
+
+```ruby
+worker_processes Integer(ENV["WEB_CONCURRENCY"] || 3)
+timeout 15
+preload_app true
+
+before_fork do |server, worker|
+  Signal.trap 'TERM' do
+    puts 'Unicorn master intercepting TERM and sending myself QUIT instead'
+    Process.kill 'QUIT', Process.pid
+  end
+
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.connection.disconnect!
+
+  @sidekiq_pid ||= spawn("bundle exec sidekiq -c 2")
+end
+
+after_fork do |server, worker|
+  Signal.trap 'TERM' do
+    puts 'Unicorn worker intercepting TERM and doing nothing. Wait for master to send QUIT'
+  end
+
+  defined?(ActiveRecord::Base) and
+    ActiveRecord::Base.establish_connection
+
+  Sidekiq.configure_client do |config|
+    config.redis = { :size => 1 }
+  end
+  Sidekiq.configure_server do |config|
+    config.redis = { :size => 5 }
+  end
+end
+```
+<small>Sources: <a href="https://devcenter.heroku.com/articles/rails-unicorn" target="_blank">Heroku docs</a>and <a href="https://coderwall.com/p/fprnhg/free-background-jobs-on-heroku" target="_blank">Coderwall</a> </small>
+
+We also need to modify our Procfile declaration to include the unicorn web server only.
+
+```ruby
+web: bundle exec unicorn -p $PORT -E $RACK_ENV -c ./config/unicorn.rb
+```
+
+Finally since the latest version of Sidekiq removed their built-in suppor for redis-to-go we need to run the following command from the root of our application:
+
+```bash
+heroku config:set REDIS_PROVIDER=REDISTOGO_URL
+```
+That's it. We are now letting mailgun to handle our mail deliveries using background jobs without paying an extra penny. 
+
+Thanks for reading!
