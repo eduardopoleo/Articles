@@ -1,2 +1,61 @@
-something in here:w
+In the application I'm building I had to set up third party software in order to handle my email sending. I also had to set up it as a background job because usually the delivery takes a couple of minutes which can be very detrimental for the user experience if the user is forced to wait all that time before being able to keep using the app.
+
+In the course we used a sidekiq. Sidekiq can handle multiple processes using threads which allows it to save memory and performe better than other background job solutions.s. 
+
+web server calls into the background so if the service is slow or down the user experience won't be impacted directly
+
+As explain in railscasts' <a href="http://railscasts.com/episodes/366-sidekiq?view=asciicast" target="_blank">episode 366</a> sidekiq uses redis to manage it's queue so we need to install this first. Redis recommends compiling from source as explained in their official <a href="http://redis.io/topics/quickstart" target="_blank">website</a>, but I decided to use the good ol' <code>sudo apt-get install redis-server</code>. 
+
+After that we need to to add sidekiq to our project by
+
+```ruby
+#Gemfile
+gem 'sidekiq'
+
+```
+Finally we need to add the sidekiq action mailer extension in the respective controller actions. For example if we want to assign our "welcome to my great app" mail delivery to a background job we can just add the following code:
+
+```ruby
+#users_controller.rb
+def create
+  @user = User.new(set_params)
+  if @user.save
+    if params[:token]
+      setup_user_guest_followings
+    end
+    AppMailer.delay.welcome_email(@user)
+    redirect_to home_path
+  else
+    render :new
+  end
+end
+```
+<small> As decribe in my <a href="http://eduardo-blog.herokuapp.com/articles/27" target="_blank">previous article</a> Line #7 would originally be similar to this: <code>AppMailer.welcome_email(@user).deliver</code></small>
+
+Now if we are doing TDD (and of course we are) we have to make sure we are running Sidekiq when running our test:  
+
+```ruby
+#spec_helper.rb
+require 'sidekiq/testing'
+Sidekiq::Testing.inline!
+```
+
+Now to test that everything is working properly locally we need to start the following process each in their own terminal window (protip set up a tmux session ;)):
+
+<ul>
+  <li>Make sure our rails server is running <code>rails s</code></li>
+  <li>Start our redis server by running  <code>redis-server</code></li>
+  <li>Finally activate sidekiq <code>bundle exec sidekiq</code></li>
+</ul>
+
+If you are using the letter_opener gem you should be able to see the email sent in the browser.
+
+Now things get interesting when we move this process to production because we will also need to keep these two processes running in parallel on the heroku server. 
+
+
+
+
+
+
+
 
