@@ -1,0 +1,48 @@
+gem "carrierwave" uploading
+gem "mini_magick" image processing
+
+```ruby
+class AddLargeCoverToVideos < ActiveRecord::Migration
+  def change
+    add_column :videos, :large_cover, :string
+    add_column :videos, :small_cover, :string
+    remove_column :videos, :small_cover_url
+    remove_column :videos, :large_cover_url
+  end
+end
+```
+
+```ruby
+#video.rb
+mount_uploader :large_cover, LargeCoverUploader
+mount_uploader :small_cover, SmallCoverUploader
+```
+
+Create a directory under app call uploarders
+
+```phyton
+!mkdir app/uploaders/
+```
+
+
+```phyton
+%section.admin_add_video
+  .container
+    .row
+      .col-md-10.col-md-offset-1
+        =bootstrap_form_for [:admin, @video], layout: :horizontal, label_col: 'col-sm-2', control_col: 'col-sm-5'  do |f|
+          %ul.nav.nav-tabs
+            %li
+              %a(href="/ui/admin_views_payments") Recent Payments
+            %li.active
+              %a(href="") Add a New Video
+          %fieldset
+            = f.text_field :title, class: 'col-sm-5' 
+            = f.collection_select(:category_id, Category.all, :id, :title, :include_blank => 'Please select a category', class: "col-sm-5")
+            = f.text_area :description, rows: 8, class: 'col-sm-5'
+            = f.file_field :large_cover, class: "btn btn-file"
+            = f.file_field :small_cover, class: "btn btn-file"
+          %fieldset.actions.form-group
+            .col-sm-2.col-md-offset-2
+              %input(type="submit" value="Add Video" class="btn btn-default")
+```

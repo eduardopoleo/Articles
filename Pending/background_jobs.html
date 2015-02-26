@@ -1,4 +1,4 @@
-Mailgun
+<h3 style='padding-top:15px;'><i>Mailgun</i></h3>
 
 In one of my <a href="http://eduardo-blog.herokuapp.com/articles/27" target="_blank">previous articles</a> I showed how to set up rails mailers from a personal gmail account. This might me ok for a small personal app but if we are expecting a larger traffic or we want to make sure that our emails get delivered, it's best to load this off to a specialized third party vendor such as <a href="http://www.mailgun.com/" target="_blank">mailgun</a>.
 
@@ -18,8 +18,8 @@ ActionMailer::Base.delivery_method = :smtp
 ```
 The configuration variables are automatically set by the addon so we do not need to worry about them. We can then deploy and verify that our emails are being sent correctly.
 
-Background Jobs
-Despite mailgun's good reliability, the problem of loading off responsibilities on third party vendors is that we have no control over their activity which, sometimes may slow down or even <a href="http://blog.mailgun.com/what-happened-yesterday-and-what-we-are-doing-about-it/" target="_blank">break</a>. Since rails can only handle one request at the time this can seriously disrupt the user experience. Thus, it is desirable to move third party activity to background jobs and let our web server provide continuous feedback to our users.   
+<h3 style='padding-top:15px;'><i>Background Jobs</i></h3>
+Despite mailgun's good reliability, the problem of loading off responsibilities on third party vendors is that we have no control over their activity which, sometimes may slow down or even <a href="http://blog.mailgun.com/what-happened-yesterday-and-what-we-are-doing-about-it/" target="_blank">break</a>. Since rails can only handle one request at the time this can seriously disrupt the user experience. Thus, it is desirable to move third party activity to background jobs and keep our web server providing feedback to our users.   
 
 In the <a href="https://www.gotealeaf.com" target="_blank">Tealeaf Course</a> we used sidekiq to handle background jobs in our applications. As explain in railscasts' <a href="http://railscasts.com/episodes/366-sidekiq?view=asciicast" target="_blank">episode 366</a> sidekiq uses Redis to manage it's queue so we need to install it first.
 
@@ -66,14 +66,14 @@ In order to test that everything is working locally we need to start the followi
 
 If you are using the letter_opener gem, you should be able to see the emails sent in your browser.
 
-Moving everything to Production
-Things get interesting when we try to move this set up to our production environment, because we will also need to keep these two processes (Rails server and sidekiq) running concurrently on the heroku server. To achieve this we must specify the type of process (or dyno) and it's corresponding command in the <a href="https://devcenter.heroku.com/articles/procfile" target="_blank">Procfile</a>: 
+<h3 style='padding-top:15px;'><i>Moving everything to Production</i></h3>
+Things get interesting when we try to move this set up to our production environment, because we will also need to keep these two processes (Rails server and sidekiq) running concurrently on the heroku server. To achieve this we must specify the type of processes (or dynos) and their corresponding commands in the <a href="https://devcenter.heroku.com/articles/procfile" target="_blank">Procfile</a>: 
 
 ```Ruby
 web: bundle exec rails server -p $PORT
 worker: bundle exec sidekiq
 ```
-Additionally, we would need to add the <a href="https://addons.heroku.com/redistogo?utm_campaign=search&utm_medium=dashboard&utm_source=addons" target="_blank">Redis To Go</a> heroku add-on. At these point it is important to understand what a Heroku dyno is. According to the Heroku's <a href="https://devcenter.heroku.com/articles/dynos" target="_blank">guides</a>
+Additionally, we need to add the <a href="https://addons.heroku.com/redistogo?utm_campaign=search&utm_medium=dashboard&utm_source=addons" target="_blank">Redis To Go</a> heroku add-on. At these point it is important to understand what a Heroku dyno is. According to the Heroku's <a href="https://devcenter.heroku.com/articles/dynos" target="_blank">guides</a>
 
 <blockquote>
   "A dyno is a lightweight linux container that runs a <strong>single</strong> user-specified command."
@@ -81,21 +81,21 @@ Additionally, we would need to add the <a href="https://addons.heroku.com/redist
 
 Thus, our current project set up will require at least two dynos running in parallel, which according to <a href="https://www.heroku.com/pricing" target="_blank">heroku's pricing</a> guide will cost us approximately $34.50/month. This is a fair amount considering the quality of service provided by Heroku, but if we are only practicing and toying around we probably want a cheaper approach. 
 
-Riding unicorns in Heroku land.
+<h3 style='padding-top:15px;'><i>Riding Unicorns</i></h3>
 
 Again according to the heroku documentation 
 
 <blockquote>
-  "The Unicorn web server lets you run any Rails application concurrently by running multiple Ruby processes in a single dyno."
+  "The Unicorn web server lets you run any Rails application concurrently by <strong>running multiple Ruby processes</strong>  in a <strong>single dyno</strong>."
 </blockquote>
 
-For us this means that we can use unicorn to run both our web and sidekiq processes without having to use two dynos. It is worth pointing out that this is more like a hack or a side effect, when deploying quality applications we should always consider using the right amount of resources. To get started with unicorn we first need to install the gem 
+For us this means that we can use unicorn to run both our web and sidekiq processes without having to use two dynos. It is worth pointing out that this is more like a hack or a side effect. When deploying quality applications we should always consider using the right amount of resources. To get started with unicorn we first need to install the gem 
 
 ```Ruby
 gem 'unicorn'
 ```
 
-Then we need to create the unicorn.rb configuration file. This can look similar to this:
+Then we need to create the unicorn.rb configuration file that can look like this:
 
 ```ruby
 worker_processes Integer(ENV["WEB_CONCURRENCY"] || 3)
@@ -130,7 +130,7 @@ after_fork do |server, worker|
   end
 end
 ```
-<small>Sources: <a href="https://devcenter.heroku.com/articles/rails-unicorn" target="_blank">Heroku docs</a>and <a href="https://coderwall.com/p/fprnhg/free-background-jobs-on-heroku" target="_blank">Coderwall</a> </small>
+<small>Sources: <a href="https://devcenter.heroku.com/articles/rails-unicorn" target="_blank">Heroku docs</a> and <a href="https://coderwall.com/p/fprnhg/free-background-jobs-on-heroku" target="_blank">Coderwall</a> </small>
 
 We also need to modify our Procfile declaration to only include the unicorn web server.
 
@@ -138,9 +138,9 @@ We also need to modify our Procfile declaration to only include the unicorn web 
 web: bundle exec unicorn -p $PORT -E $RACK_ENV -c ./config/unicorn.rb
 ```
 
-Finally since the latest version of Sidekiq removed their built-in suppor for redis-to-go we need to run the following command from the root of our application:
+Finally since the latest version of Sidekiq removed their built-in support for redis-to-go we need to run the following command from the root of our application:
 
-```bash
+```python
 heroku config:set REDIS_PROVIDER=REDISTOGO_URL
 ```
 That's it. We are now letting mailgun to handle our mail deliveries on the background without paying an extra penny. 

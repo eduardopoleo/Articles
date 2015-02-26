@@ -1,0 +1,71 @@
+Assert
+
+<h3 style='padding-top:15px;'><i>1-5 About Asserts</i></h3>
+Assert test if the condition passed in is true or false. It returns true if the the condition is true If the condition is true and throws and error otherwise. Assert can be be accompanied by a message to be raised if the condition is false. 
+
+It is important to note that all the assertions belong to the ```Test::Unit::Assertions``` module so we need to require it in order for it to work as explained [here](http://stackoverflow.com/questions/3850234/in-ruby-can-you-execute-assert-equal-and-other-asserts-while-in-irb "assert"). The oposite methof of assert is ```refute``` which returns false is the condition given is false and an exeption if the condition is true 
+
+The conditions passed can be provided into ways, 
+
+```ruby
+#First way
+assert expected_value == actual_value
+
+#better ways
+assert_equal expected_value, actual_value
+```
+Probably is consider better assert_equal because it throws a better default error message. 
+
+<h3 style='padding-top:15px;'><i>6-8 About Nil</i></h3>
+
+```ruby Nil``` like anything in ruby is an object specifically from an instance of the the ```NilClass``` which enherits from the Object class.
+
+Calling a method on nil will yield a NoMethodError.
+
+Extra:```assert_match(regex, expresion)``` matches pattern within a string message. 
+
+Nil has few methods you can call on it though. Such as: ```.nil?```, ```.to_s```, ```.inspect```, ```is_a?```, ```instance_of?```, curously though:
+
+```ruby
+nil.nil? => true
+nil.to_s => ""
+nil.inspect => "nil"
+```
+Extra: The [inspect](http://ruby-doc.org/core-2.2.0/Object.html#method-i-inspect "inspect") method in general returns a human readable representation of the object.  
+nil is the only object for which the .nil? method is true
+obj.nil? is better becase it uses polymorphism based on the fact that ```nil``` is th only object for which the .nil? method is true. Thus, nil? does not need to perform a comparison between objects which results in a [micro-optimazation](http://stackoverflow.com/questions/1972266/obj-nil-vs-obj-nil "nil?") over ```obj == nil```.
+
+
+<h3 style='padding-top:15px;'><i>8-15 About Objects</i></h3>
+
+Everything in ruby is an object, everything. 
+All objects posses the ```.to_s``` and ```inspect```. This is easily verifiable by calling these methods on the ```BasicObject``` class from which all inherit. 
+All object has ids and all id's are instance of FixNum. All objects posses different id's. Small integers id's follow the following pattern ```2n+1``` where n is the number value.
+
+In ruby there is a [clone](http://ruby-doc.org/core-2.2.0/Object.html#method-i-clone "Clone"), method. But clones are actually different objects and hence have differetn id's. As as consequence you can't clone FixNums because they always have the same id.
+
+
+<h3 style='padding-top:15px;'><i>16- Creating Arrays</i></h3>
+
+about arrays
+
+Array.new == []
+string can appear multiple times but not the 
+array can be sliced passing two indexes
+
+there are inclusive ranges and exclusives ranges.
+Range is a class 
+range is not an array but we can make it so by calling to_a
+
+about array_assigment
+
+about hashes
+
+assert_raise will assert if an error is created fetch can be use to set an specific error message.
+Storing hashes in a variable yo do not need to use the paren, semantics matter if you assign a variable you d no need it.
+merge puts the current value to the new ones contrary to reverse merge (this is the other way around)
+merge! will produce a nil if it does not chages anything.
+
+if there are some values floating around without any key, you can assign the key on the fly
+the array is passed as a refrences. Pass by reference is dangerous by it is also very fast.
+last koan 43

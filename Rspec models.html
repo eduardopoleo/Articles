@@ -11,20 +11,21 @@
 
 <p>1) Install the Rspec gem into the development and the test environment.</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>#Gemfile
+```ruby
+#Gemfile
 group :development, :test do
   gem 'rspec-rails'
-end</code>
-</pre>
+end
+```
+
 
 Then run bundle accordingly.
 
 <p>Generate the rails configuration files</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>rails g rspec:install</code>
-</pre>
+```ruby
+rails g rspec:install
+```
 
 <p>This generates the following files:</p>
 
