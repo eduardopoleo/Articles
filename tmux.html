@@ -1,0 +1,91 @@
+My start up routine used to be more or less like this: open a terminal, navigate to the root directory, open the editor. Repeat for console, database, server and sometimes other processes. Besides the nonsense repetition, this makes switching projects a very tedious process. Moreover, navageting through different windows is a bit of a nightmare. I usually toggle applications using Alt-tap but this becomes extremely cumbersome as the number of open windows approaches to 4. 
+
+Tmux is a terminal multiplexer that allows you to create sessions to easily manage your terminal windows. Once inside a session it is really easy to switch between different windows, create and resize panels within the same window and start different processess in each of them. On top of that, sessions configurations can easily be scripted effectely automating the tedious routine described above.     
+
+So our goal by the end of the article if to be able to say this:
+
+<blockquote>
+"When I come to work in the morning I open a terminal, type 'start' and I have all my development environment served and ready including vim, server, console, database, and an extra terminal, so that I can start working right away in my current project."
+</blockquote>
+
+Now let's think how we can achieve this in terms of Tmux workflow. Once we are in the project's directory we would need to create a new Tmux session from where we are going to manage all our terminal windows. This session is going to be called 'development'. We are also going to name our first window 'editor' as we intent to run vim from there.
+
+Once we have created the session we want to immediately to detach from it. The reason for this is that we run commands from the command line and not from within processes, (e.g you can't run ```rails c```  from withing the rails server or vim). So it is easier to start all the processes from a window outside the tmux session. All this can be accomplish with the following command:
+
+```python
+tmux new-session -s development -n editor -d
+```
+Note how we use the -s label to name the session, the -n label to name the window and the -d to detach from the current session.
+
+Next we want to start vim in our newly created Tmux session. Since we previously detached from it we need to 'send' the corresponding keys to the session. We do this by:
+
+```python
+tmux send-keys -t development 'vim' C-m
+```
+Note how we need to use the -t label to indicate the session.
+
+Now we need to create the terminal windows that are going to contain the rest of the processes. We are going to start with the rails console: 
+
+```python
+tmux new-window -n console -t development
+```
+
+We will then send the ```rails c``` command to the session but this time we need to indicate to which window within the development session is going to:
+
+```python
+tmux send-keys -t development:2 'bundle exec rails c' C-m
+```
+We repeat this with the remaining processes: 
+
+```python
+tmux new-window -n server -t development
+tmux send-keys -t development:3 'bundle exec rails s' C-m
+
+tmux new-window -n database -t development
+tmux send-keys -t development:4 'bundle exec rails db' C-m
+
+tmux new-window -n bash -t development
+```
+Finally we are going to set the editor a the initial active window and reattach to the session. 
+
+```python
+tmux select-window -t development:1
+tmux attach -t development
+```
+By now our full development.sh script should look like this:
+
+```python
+#!/bin/bash
+
+tmux new-session -s development -n editor -d
+
+tmux send-keys -t development 'vim' C-m
+
+tmux new-window -n console -t development
+tmux send-keys -t development:2 'bundle exec rails c' C-m
+
+tmux new-window -n server -t development
+tmux send-keys -t development:3 'bundle exec rails s' C-m
+
+tmux new-window -n database -t development
+tmux send-keys -t development:4 'bundle exec rails db' C-m
+
+tmux new-window -n console -t development
+
+tmux select-window -t development:1
+tmux attach -t development
+```
+We have to give execute permision to our script for it to be runnable.
+
+```python
+chmod u+x script1.sh
+```
+Finally all we need to do is to set an bash alias in our .bashrc file that takes us right to our projects folder and then execute the script.
+
+```python
+#.bashrc
+
+alias='cd ~/Projects/my_app/;development.sh'
+```
+
+With this we have achieved our goal!

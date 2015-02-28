@@ -1,11 +1,11 @@
-Assert
+On the last ruby workshop we went through some of the first koans with the purpose to get some insights on the ruby language. This motivated me to start a series about the koans. Throughout this series I'll be making some comments about the things I find most interesting.
 
 <h3 style='padding-top:15px;'><i>1-5 About Asserts</i></h3>
-Assert test if the condition passed in is true or false. It returns true if the the condition is true If the condition is true and throws and error otherwise. Assert can be be accompanied by a message to be raised if the condition is false. 
+```assert``` test if the condition passed-in is true or false. It returns true if the condition is true and error otherwise.```assert``` can be be accompanied by a message to be raised if the condition is not true. 
 
-It is important to note that all the assertions belong to the ```Test::Unit::Assertions``` module so we need to require it in order for it to work as explained [here](http://stackoverflow.com/questions/3850234/in-ruby-can-you-execute-assert-equal-and-other-asserts-while-in-irb "assert"). The oposite methof of assert is ```refute``` which returns false is the condition given is false and an exeption if the condition is true 
+It is important to note that all the assertions belong to the ```Test::Unit::Assertions``` module so we need to require it in order for it to work, as explained [here](http://stackoverflow.com/questions/3850234/in-ruby-can-you-execute-assert-equal-and-other-asserts-while-in-irb "assert"). The 'opposite' method of assert is ```refute``` which returns false is the condition given is false and an exception if the condition is not false. 
 
-The conditions passed can be provided into ways, 
+Simple assertions can be tested using these two commands: 
 
 ```ruby
 #First way
@@ -14,58 +14,95 @@ assert expected_value == actual_value
 #better ways
 assert_equal expected_value, actual_value
 ```
-Probably is consider better assert_equal because it throws a better default error message. 
+```assert_equal``` is probably better because it throws a slightly more descriptive default error message. 
 
 <h3 style='padding-top:15px;'><i>6-8 About Nil</i></h3>
 
-```ruby Nil``` like anything in ruby is an object specifically from an instance of the the ```NilClass``` which enherits from the Object class.
-
-Calling a method on nil will yield a NoMethodError.
-
-Extra:```assert_match(regex, expresion)``` matches pattern within a string message. 
-
-Nil has few methods you can call on it though. Such as: ```.nil?```, ```.to_s```, ```.inspect```, ```is_a?```, ```instance_of?```, curously though:
+```nil``` ,like everything in ruby, is an object specifically an instance of the ```NilClass``` which inherits from the ```Object``` class. Nil has some few methods you can call on it such as: ```.nil?```, ```.to_s```, ```.inspect```, ```is_a?```, ```instance_of?```, curiously though:
 
 ```ruby
 nil.nil? => true
 nil.to_s => ""
 nil.inspect => "nil"
 ```
-Extra: The [inspect](http://ruby-doc.org/core-2.2.0/Object.html#method-i-inspect "inspect") method in general returns a human readable representation of the object.  
-nil is the only object for which the .nil? method is true
-obj.nil? is better becase it uses polymorphism based on the fact that ```nil``` is th only object for which the .nil? method is true. Thus, nil? does not need to perform a comparison between objects which results in a [micro-optimazation](http://stackoverflow.com/questions/1972266/obj-nil-vs-obj-nil "nil?") over ```obj == nil```.
+When trying to find out whether an object is nil or not ```obj.nil?``` is better because it uses polymorphisms based on the fact that ```nil``` is the only object for which the ```.nil?``` method is true. Thus, ```nil?``` does not need to perform a comparison between objects which results in a [micro-optimization](http://stackoverflow.com/questions/1972266/obj-nil-vs-obj-nil "nil?") over ```obj == nil```.
 
-
+Extra:```assert_match(regex, expression)``` matches pattern within a string message. 
+Extra: The ```[inspect](http://ruby-doc.org/core-2.2.0/Object.html#method-i-inspect "inspect")``` method in general returns a human readable representation of the object.  
 <h3 style='padding-top:15px;'><i>8-15 About Objects</i></h3>
 
-Everything in ruby is an object, everything. 
-All objects posses the ```.to_s``` and ```inspect```. This is easily verifiable by calling these methods on the ```BasicObject``` class from which all inherit. 
-All object has ids and all id's are instance of FixNum. All objects posses different id's. Small integers id's follow the following pattern ```2n+1``` where n is the number value.
+Again everything in ruby is an object, everything. 
+All objects posses the ```.to_s``` and ```inspect``` methods. This is easily verifiable by calling these methods on the ```BasicObject``` primordial class. 
+All object have ids and all ids are instances of ``` FixNum```. All objects posses different ids and small integers ids follow the ```2n+1``` pattern, where n is the number value.
 
-In ruby there is a [clone](http://ruby-doc.org/core-2.2.0/Object.html#method-i-clone "Clone"), method. But clones are actually different objects and hence have differetn id's. As as consequence you can't clone FixNums because they always have the same id.
+In ruby there is a ```[clone](http://ruby-doc.org/core-2.2.0/Object.html#method-i-clone "Clone")```, method. But clones objects are actually different and posses different ids. As as consequence, you can't clone ```FixNums``` because they would have the same id.
 
+<h3 style='padding-top:15px;'><i>16- About Arrays</i></h3>
 
-<h3 style='padding-top:15px;'><i>16- Creating Arrays</i></h3>
+Arrays belong to the array class and their indexing starts at 0. We can also access arrays elements by using negative numbers, the last element would correspond to the index -1, the element before last -2 and so on. This specially useful when iterating through an array of unknown length. Array elements can also be accessed by providing pair of values (start and length) as shown below:
 
-about arrays
+```ruby
+array = [:peanut, :butter, :and, :jelly]
 
-Array.new == []
-string can appear multiple times but not the 
-array can be sliced passing two indexes
+array[0] => [:peanut]
+array[0,1] => [:peanut]
+array[0,2] => [:peanut, :butter]
+array[2,2] => [:and, :jelly]
+array[4,0] => []
+array[5,0] => nil
+```
+The last two cases are a bit strange but there is a good explanation in [this](http://stackoverflow.com/questions/3568222/array-slicing-in-ruby-looking-for-explanation-for-illogical-behaviour-taken-fr "Array slicing") SO question. 
 
-there are inclusive ranges and exclusives ranges.
-Range is a class 
-range is not an array but we can make it so by calling to_a
+Ranges are instances of the ```Range``` class, not to be confused with the ```Array``` class. They respond to the ```.to_s``` and ```.to_a``` in the following manner:
 
-about array_assigment
+```ruby
+range = (1..5)
+range.to_s =>  "1..5"
+range.to_a =>  [1 ,2 ,3, 4, 5]
 
-about hashes
+```
 
-assert_raise will assert if an error is created fetch can be use to set an specific error message.
-Storing hashes in a variable yo do not need to use the paren, semantics matter if you assign a variable you d no need it.
-merge puts the current value to the new ones contrary to reverse merge (this is the other way around)
-merge! will produce a nil if it does not chages anything.
+Ranges can also be non-inclusive meaning that they will not include the last element specified, as an example:
 
-if there are some values floating around without any key, you can assign the key on the fly
-the array is passed as a refrences. Pass by reference is dangerous by it is also very fast.
-last koan 43
+```ruby
+range = (1...5)
+range.to_a = [1, 2, 3, 4]
+```
+Range can be used to access array elements below:
+
+```ruby
+array = [1,2,3,4,5]
+array(0..2) => [1,2,3]
+array(0...2) => [1,2]
+```
+
+The ```array.push(value)``` method inserts value at the end of the array. The  ```array.pop``` method pops out the last elements and returns it. 
+The ```array.unshift(value)``` inserts a value at the beginning of the array while ```array.unshift``` removes it and returns it.
+
+<h3 style='padding-top:15px;'><i>About Array Assignment</i></h3>
+Non-parallel assignment is what we would normally understand as array assignment, while non-parallel assignment sets multiple variables to different elements of an array. As an example:
+
+```ruby
+# Parallel assignment 
+names = ["John", "Smith"] 
+# Non-Parallel assignment 
+names = ["John", "Smith"] 
+first_name, last_name = ["John", "Smith"] => first_name = "John", last_name = "Smith"
+```
+
+Parallel assignment can be used to assign more than two variables. If there is more variables to assign than elements in the array the latter variables are going to be set to nil. Nevertheless the splat operator has a different behavior
+
+```ruby
+first_name, *last_name = ["John", "Smith", "III"]
+assert_equal "John", first_name
+assert_equal ["Smith", "III"], last_name
+```
+Swapping variables can be much quicker like this: 
+
+```ruby
+first_name = "Roy"
+last_name = "Rob"
+first_name, last_name = last_name, first_name
+assert_equal "Rob", first_name
+assert_equal "Roy", last_name
+```
