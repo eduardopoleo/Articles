@@ -1,9 +1,93 @@
-<h3 style='padding-top:15px;'><i>31- About Hashes</i></h3>
+<h3 style='padding-top:15px;'><i>31-43 About Hashes</i></h3>
 
 Hashes belong to the class ```Hash``` and the can be instantiated like any other object. An empty hash has size 0.
 
 Elements inside hashes can be accesed through its keys, trying to access an element with a non existing key yields ```nil```.
 
+We can also access ruby hashes using ```fetch``` in this case if the inputted ey does not exist we get ```KeyError```. So we probably want to use fetch if we want to be certain that we are expecting the hash to contain a given value for the key we are inputting. Also ```fetch``` is very [feature rich](http://stackoverflow.com/questions/16569409/fetch-vs-when-working-with-hashes "fetch"	)feature rich and may come in handy in very different situations. 
 
+When using the assert equal to compare to hashes we need to brake them down into variables or use parenthesis as shown below. The reasons are well explained in [here](http://stackoverflow.com/questions/16569409/fetch-vs-when-working-with-hashes "hashes"	)
+
+```ruby
+hash = { :one => "eins", :two => "dos" }
+expected = { :one => "eins", :two => "dos" }
+assert_equal expected, hash
+#it also work like this
+assert_equal ({:one => "eins", :two => "dos" }, hash)
+```
+Ruby hashes are not ordered and the methos ```.keys``` and ```.values``` will return an array containing the hash keys and values respectively.
+Mergin two hashes will have the following behavior
+
+```ruby
+hash = { "jim" => 53, "amy" => 20, "dan" => 23 }
+new_hash = hash.merge({ "jim" => 54, "jenny" => 26 })
+#=> new_hash = {"jim"=>54, "amy"=>20, "dan"=>23, "jenny"=>26}
+```
+As if we were "merging" the new key-value pairs on top of the existing ones. It is important to know the that the original hashes will not be matutate the original hashes. If we use ```merge!``` instead ```hash``` will be mutated as well.
+
+We can initialize hashes with a default value. If we do that all the unassign keys will return the default value as seen below:
+
+```ruby
+hash = Hash.new("dos")
+=> {}
+hash[:a]
+#=> "dos"
+hash[:b]
+#=> "dos"
+hash
+#=> {}
+```
+It is important to note that these are just default values! to be returned in case there is an unassigned key is called. They are not actually values present on the hash as seen on the snippet above. Passing in a value will create [exactly one object](http://stackoverflow.com/questions/4410076/how-can-i-initialize-an-array-inside-a-hash-in-ruby "Default value") that will be mapped to all unassigned keys. This default value can be mutated dinamically as shown below:  
+
+```ruby
+hash = Hash.new([])
+#=> []
+hash[:a] 
+#=>[]
+hash[:a] << "one"
+#=> ["one"]
+hash[:b] << "two"
+#=> ["one", "two"]
+hash[:c]
+#=> ["one", "two"]
+```
+
+When using a block every unassigned key will be mapped to a different object as shown below:
+
+```ruby
+@my_hash = Hash.new {|h,k| h[k] = []}
+#=> {}
+@my_hash[:a] << "one"
+#=> ["one"]
+@my_hash[:b] << "two"
+#=> ["two"]
+```
+
+<h3 style='padding-top:15px;'><i>About Strings</i></h3>
+
+Both 'single' and "double" quoted strings belong to the ```String``` class and they can be used to wrap one or another as shown:
+```ruby
+"Don't quote me'"
+'I like quoting using ""'
+```
+
+For hard cases where we need to use both ```""``` ```''``` simultanousely inside the string, we can use escapes of flexible quoting:
+
+```ruby
+a = "He said, \"Don't\""
+#=>"He said, \"Don't\""
+b = %(This is a flexible quoute)
+#=>"This is a flexible quoute"
+``
+Note that the ```\``` are not accounted towards the size of the string and  ```a[9]``` will return the full scaped characted charater ```"\""```. String can also be sliced in the same way as arrays by passing in two indexes.
+
+```ruby
+a="123456789"
+#=> "123456789" 
+a[0,5]
+#=> "12345"
+a[3,5]
+#=>"45678"
+```
 
 
