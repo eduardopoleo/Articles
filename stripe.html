@@ -1,0 +1,201 @@
+Getting started with stripe is really easy. All we need to do is follow one of the many stripe's great [tutorials](https://stripe.com/docs/checkout/guides/rails "Stipe payment") and we can set up a payment widget in no time. Nevertheless, proper API integration and implementation is a different feat. We can start by taking a simplify look to stripe's payment work-flow:
+
+<ul>
+  <li>User submits his personal and payment information.</li>
+  <li>The payment information is captured by stripe who encrypts it and passes it back to our params in the form of a ```:stripeToken```.</li>
+  <li>The params reaches our code where we can proceed with the payment and determine whether the payment is successful or not.</li>
+</ul>
+
+For the first two points we would need to create a custom form and somehow "mark" the credit card fields so that stripe knows where to capture the payment information from. This is fairly easy and it is well explained [here](https://stripe.com/docs/tutorials/forms "Stripe forms"). This post will focus more on the third point though.
+
+<h3 style='padding-top:15px;'><i>Wrapping the API</i></h3>
+The first thing we want do is to wrap the API into it's own module so that we can easily reuse it everywhere we need to. This will also make our life much easier when testing and when reviewing our code base in the future. In order to this, we can start by analyzing a slightly modified version of some of the stripe's suggested [code snippets](https://stripe.com/docs/checkout/guides/rails "stripe code").   
+
+```ruby
+def create
+  @amount = 500
+
+  charge = Stripe::Charge.create(
+    :card  => params[:stripeToken]
+    :amount      => @amount,
+    :description => 'Some customer',
+    :currency    => 'usd'
+  )
+
+rescue Stripe::CardError => e
+  flash[:error] = e.message
+  redirect_to jegister_path
+end
+```
+Once stripe has captured the payment information (card number, expiry date, cvv) it will encrypt it and create a ```stripeToken```. This token is then passed back into our params to be processed by the our application. The code above takes this token and creates a charge, and if there is a problem with the card it returns a ```Stripe::CardError```. It is important to note that during this whole work-flow we will never have direct access to the user's payment info, which is necessary for CLI compliance. 
+
+Our snippet above differs slightly from the one suggested by [Stripe](https://stripe.com/docs/checkout/guides/rails "Stripe code"). We do not explicitly create a stripe ```customer``` because we probably want to handle the user creation directly in our application. But we still need to store the card ```stripeToken``` in order to handle the payments, so we move that little bit of code into the charge section.
+
+Now that we have a basic understanding on how the API works we can start writing some requirements.
+
+<ul>
+  <li>If the card information is valid create a successful charge .</li>
+  <li>If the card is not valid do NOT create a successful charge.</li>
+  <li>If the card is not valid capture the ```Stripe::CardError```.</li>
+</ul>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Successful payments</h4>
+So our firts requirement translated into Rspec could probably look like this.
+
+```ruby
+#spec/models/stripe_wrapper_spec.rb
+describe StripeWrapper::Charge do
+  # This block just creates an imaginary Stripe Token. 
+  let(:token) do
+    Stripe::Token.create(
+      :card => {
+        :number => card_number,
+        :exp_month => 3,
+        :exp_year => 2016,
+        :cvc => "314"
+      },
+    ).id
+  end
+
+  context "with valid card" do
+    let(:card_number) {'4242424242424242'}
+    it "charges the card successfully" do
+      response =  StripeWrapper::Charge.create(
+        amount: 300,
+        card: token)
+      expect(response).to be_successful
+    end
+  end
+```
+
+The first chunk of code just creates a fake ```cardToken``` to be used in our test. Normally, this token would be created once the user had submitted his/her information, but in this case we need to create the token "manually" using the [stripe API](https://stripe.com/docs/api#token_object "stripe token") ourselves. As seen on the API this token is actually a hash containing a great deal of information, but we are only going to need ```id``` attribute from it. The card number used is taken from the stripe [testing page](https://stripe.com/docs/testing "stripe testing") and it corresponds to a valid card.  
+
+Once we have created the token with the payment information we have to call our ```StripeWrapper``` module which is going to create a charge, and since we are testing with a "valid card" we are expecting the stripe response to ```be_successful```. This test could produce the following working code:
+
+```ruby
+#app/models/stripe_wrapper.rb
+module StripeWrapper
+  class Charge
+    attr_reader :response, :status
+
+    def initialize(response, status)
+      @response = response
+      @status = status 
+    end
+
+    def self.create(options={})
+      response =  Stripe::Charge.create(
+      amount: options[:amount],
+      currency: 'usd',
+      card: options[:card]) 
+
+      new(response, :success)
+    end
+
+    def successful?
+      status == :success
+    end
+  end
+end
+```
+
+We are going to use the ```create``` method to instantiate ```Charge```, much like when we do ```SomeModel.create(...)```.  It will take an ```options``` hash and it will create an object containing the payment response and a status message ```new(response, :success)```. The ```successful?``` method will just quickly verify that the transaction is successful by checking on the status attribute. 
+
+It is important to note that, the [predicate](http://www.rubydoc.info/gems/rspec-expectations/RSpec/Matchers "Predicate") is what allows to write the ```be_successful``` matcher in Rspec.  
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>Does not create a charge with invalid card information</h4>
+We add the following code to our test suite:
+
+```ruby
+#spec/models/stripe_wrapper_spec.rb
+#...some code
+
+context "with invalid card", :vcr do
+  let(:card_number) {'4000000000000002'}
+  let(:response) {response =  StripeWrapper::Charge.create(amount: 300, card: token)}
+
+  it "does not charge the card successfully" do
+    expect(response).not_to be_successful
+  end
+end
+
+```
+The idea is the same as before the only thing that changes is the card number provided which in this case corresponds to a declined card. Running this test with the current code in our wrapper will throw an ```Stripe::CardError``` message causing it to fail, so we need to handle this error in our wrapper, as shown below.
+
+```ruby
+#app/models/stripe_wrapper.rb
+#..some code
+def self.create(options={})
+  begin 
+    response =  Stripe::Charge.create(
+      amount: options[:amount],
+      currency: 'usd',
+      description: options[:description],
+      card: options[:card]) 
+
+    new(response, :success)
+  rescue Stripe::CardError => e
+    new(e, :error)
+  end
+end
+```
+Here we are creating an instance of charge but we are storing the error information in ```e``` and giving it a status of ```:error```. Now, the successful? method will return ```false``` causing our second test to pass. 
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3. </span>Present the Error</h4>
+
+Finally we need a way to retrieve the error message so that we can present it to the user. We can write the following test case:
+
+```ruby
+#spec/models/stripe_wrapper_spec.rb
+context "with invalid card" do
+  #some code
+  it "contains an error message" do
+    expect(response.error_message).to be_present 
+  end
+end
+```
+
+Then in our code we can just add the following method:
+
+```ruby
+def error_message
+  response.message
+end
+```
+
+The full wrapper will then look like this:
+
+```ruby
+module StripeWrapper
+  class Charge
+    attr_reader :response, :status
+    def initialize(response, status)
+      @response = response
+      @status = status 
+    end
+
+    def self.create(options={})
+      begin 
+        response =  Stripe::Charge.create(
+          amount: options[:amount],
+          currency: 'usd',
+          description: options[:description],
+          card: options[:card]) 
+
+        new(response, :success)
+      rescue Stripe::CardError => e
+        new(e, :error)
+      end
+    end
+
+    def successful?
+      status == :success
+    end
+
+    def error_message
+      response.message
+    end
+  end 
+end
+```
+On my next article I am going to use the wrapper to implement the payment functionality on the controller. As always thanks for reading.

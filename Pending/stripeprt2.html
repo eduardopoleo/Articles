@@ -1,0 +1,107 @@
+On my  [previous article](http://eduardo-blog.herokuapp.com/articles/33"title") I showed how to create an API wrapper for Stripe. In this post I am going to link the wrapper to the ```ChargesController``` so that we can start accepting payments! Without further ado here are the requirements for our controller.
+
+For a successful payment:
+<ul>
+  <li>Redirects to the home path.</li>
+  <li>Sets a ```flash[:success]``` message.</li>
+</ul>
+
+For a non successful payment:
+<ul>
+  <li>Redirects to the new_charge_page.</li>
+  <li>Sets a ```flash[:error]``` message.</li>
+</ul>
+
+With that in mind we can create the following expectation for a successful charge.  
+
+```ruby
+describe ChargesController do
+  context 'with valid charge' do
+    let(:charge) {double('charge')} 
+
+    before do
+      StripeWrapper::Charge.stub(:create).and_return(charge)
+      charge.stub(:successful?).and_return(true)
+      post :create, token: '123'
+    end
+
+    it 'sets a flash message' do
+      expect(flash[:success]).to eq('Thank you for your support')
+    end
+
+    it 'renders the create template' do
+      expect(response).to render_template :create
+    end
+  end
+end
+```
+
+The ```double('charge')``` method allows us to create a mock object which we can later stub to make it behave like real charge object. ```charge.stub(:successful?).and_return(true)``` will ensure that every time we call the ```successful?``` method on charge (in the controller) it will return true. In this context this is the desire output because we are dealing with successful payments.
+
+We want to use stub methods in this case because the waiting time for the API response is generally long (in the order of various seconds) and computationally expensive. This might no be a problem when our test suite is small but when we are running a couple of hundreds specs it can become cumbersome. Moreover, our ```StripeWrapper``` was thoroughly tested [previously](http://eduardo-blog.herokuapp.com/articles/33 "Blog post"), so there is no need to call the API again if we already know the desire outcome. 
+
+The previous spec would produce the following code:
+
+```ruby
+class ChargesController < ApplicationController
+  def create
+    @amount = 500
+
+    token = params[:stripeToken]
+    charge = StripeWrapper::Charge.create(
+      :amount => @amount,
+      :description => 'Rails Stripe customer',
+      :card => token)
+
+      flash[:success] = 'Thank you for your support'
+      redirect_to home_path
+    end
+  end
+end
+```
+
+We can do something similar for when the charge is not successful.
+```ruby
+#spec/controllers/charge_controller_spec.rb
+context 'with invalid charge' do
+    let(:charge) {double('charge')} 
+
+    before do
+      StripeWrapper::Charge.stub(:create).and_return(charge)
+      charge.stub(:successful?).and_return(false)
+      charge.stub(:error_message).and_return("Your card was declined.")
+      post :create, token: '123'
+    end
+
+    it 'sets the flash error message' do
+      expect(flash[:error]).to eq('Your card was declined.')
+    end
+
+    it 'redirects to the new charges path' do
+      expect(response).to redirect_to new_charge_path
+    end
+  end
+```
+Note that in this case we are stubbing the charge so that it returns false to the ```sucessful?``` method. After this test our final code would like this:
+
+```ruby
+#app/controllers/charge_controller.rb
+class ChargesController < ApplicationController
+  def create
+    charge = StripeWrapper::Charge.create(
+      :amount => 500,
+      :description => 'Rails Stripe customer',
+      :card => params[:stripeToken])
+
+    if charge.successful?
+      flash[:success] = 'Thank you for your support'
+      redirect_to home_path
+    else
+      flash[:error] = charge.error_message
+      redirect_to new_charge_path
+    end
+  end
+end
+```
+Thanks for reading.
+
