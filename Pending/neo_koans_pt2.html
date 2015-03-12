@@ -89,5 +89,27 @@ a[0,5]
 a[3,5]
 #=>"45678"
 ```
+For really hard cases we can use flexible quoting which can handle double and single quoting. And they also support spaces
+```ruby
+a = %(flexible quotes can handle both ' and " characters)
+b = %!flexible quotes can handle both ' and " characters!
+test = %{
+foo
+}
+#=> "\nfoo\n"
+```
+And we can also use EOS but they wont account the first space:
+```ruby
+test = <<EOS
+foo
+EOS
+#=>"foo\n"
+```
+"test_the_shovel_operator_modifies_the_original_string" was probably one of the most interesting test
+
+
+
+
+
 
 

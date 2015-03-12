@@ -1,0 +1,168 @@
+Decorators are used to extract presentation logic from the model. 
+
+1) We create a directory under app/decorators
+2) We create a file under this app/decorators/todo_decorator.rb
+3) We move to the new decorator the presentation logic. 
+4) We define the corresponding attr readers and the initializers for the class
+5) We can decide to extend the methods of the todo to the decorator using 
+6) Re initialize the rails server.
+  ```ruby
+  extend Forwardable
+  def_delegators :todo, :name_only?
+
+  ```
+
+wouldn't it be harder for newcomers to a project to understand the source code if it is spread out through multiple layers of objects.
+
+So our Initial code is like this
+
+```ruby
+def create
+  #I can use build everywhere when there is an assotiation 
+  @todo = current_user.todos.build(todos_params)
+  # @todo = Todo.new(todos_params.merge!(user: current_user))
+  # Both ways is equivalent to 
+  # @todo = Todo.new(todos_params)
+  # @todo.user = current_user
+  
+  if @todo.save_with_tags
+    if current_user.created_at < Date.new(2009,1,1) || current_user.premium? 
+      new_credit_balance = current_user.current_credit_balance - 1
+    else
+      new_credit_balance = current_user.current_credit_balance - 2
+    end
+
+    current_user.update_attribute(:current_credit_balance, new_credit_balance)
+    if new_credit_balance < 0
+      AppMailer.notify_insufficient_credit(current_user).deliver
+    elsif current_user.current_credit_balance < 10
+      AppMailer.notify_low_balance(current_user).deliver
+    end
+    redirect_to todos_path 
+  else
+    render :index
+  end
+end
+```
+
+<h3 style='padding-top:15px;'><i>Policy Object</i></h3>
+
+```ruby
+#models/user_level_policy.rb
+class UserLevelPolicy
+  attr_reader :user
+  def initialize(user)
+    @user = user
+  end
+
+  def premium?
+    user.created_at < Date.new(2009,1,1) || user.premium? 
+  end
+end
+```
+
+We have different types of users when charging credit. We want to abstract away our users policy into another class. In this particular case the policy is very simple but when we have more complex logic then it will be easier to test and handle. Others levels of the application can just refer to that the policy object to determine to what level does that user belong. 
+
+<h3 style='padding-top:15px;'><i>Domain Objects</i></h3>
+
+Domains objects are used to extract main business logic. In this case we are going to create a domain objects  in order to handle the credit update feature of our app, which right now is being handled directly by the controller. 
+WE make a concept more explicit in this case we extract the concept of user credit into something much more explicit.
+
+```ruby
+app/models/credit.rb
+class Credit
+  attr_accessor :user, :balance
+
+  def initialize(user)
+    @balance = user.current_credit_balance
+    @user = user
+  end
+
+  def substract(number)
+    @balance = @balance - number
+  end
+
+  def save
+    user.update_attribute(:current_credit_balance, balance)
+  end
+
+  def depleded?
+    balance < 0
+  end
+
+  def low_balance?
+    balance < 10
+  end
+end
+```
+the resulting code would look like this:
+
+```ruby
+def create
+  #I can use build everywhere when there is an assotiation 
+  @todo = current_user.todos.build(todos_params)
+   # @todo = Todo.new(todos_params.merge!(user: current_user))
+  # Both ways is equivalent to 
+  # @todo = Todo.new(todos_params)
+  # @todo.user = current_user
+  credit = Credit.new(current_user)
+  if @todo.save_with_tags
+    if UserLevelPolicy.new(current_user).premium?
+      credit.substract(1) 
+    else
+      credit.substract(2) 
+    end
+    credit.save
+    if credit.depleded?
+      AppMailer.notify_insufficient_credit(current_user).deliver
+    elsif credit.low_balance?
+      AppMailer.notify_low_balance(current_user).deliver
+    end
+    redirect_to todos_path 
+  else
+    render :index
+  end
+end
+```
+Service Object
+We use them to extract business processes and make them more explicit. 
+
+
+
+```ruby
+#app/services/credit_deduction.rb
+class CreditDeduction
+  attr_accessor :credit, :user
+
+  def initialize(user)
+    @user = user
+    @credit = Credit.new(user)
+  end
+
+  def deduct_credit
+    if UserLevelPolicy.new(user).premium?
+      credit.substract(1) 
+    else
+      credit.substract(2) 
+    end
+    credit.save
+    if credit.depleded?
+      AppMailer.notify_insufficient_credit(user).deliver
+    elsif credit.low_balance?
+      AppMailer.notify_low_balance(user).deliver
+    end    
+  end
+end
+```
+
+```ruby
+def create
+  @todo = current_user.todos.build(todos_params)
+  if @todo.save_with_tags
+    CreditDeduction.new(current_user).deduct_credit 
+    redirect_to todos_path 
+  else
+    render :index
+  end
+end
+```
