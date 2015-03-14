@@ -1,0 +1,158 @@
+<h3 style='padding-top:15px;'><i>32-43 About Hashes</i></h3>
+
+Hashes belong to the class ```Hash``` and they can be instantiated like any other object. An empty hash has a size of 0.  Elements inside hashes can be accessed through its keys, trying to access an element with a non existing key returns ```nil```.
+
+Ruby hashes can also be accessed using the ```fetch``` method. In this case if the inputted key does not exist, and there is no default value a ```KeyError``` is thrown. So we probably want to use fetch if we are expecting the hash to contain a value for the key we are inputting. Also ```fetch``` is very [feature rich](http://stackoverflow.com/questions/16569409/fetch-vs-when-working-with-hashes "fetch"	) and may come in handy in very different situations. 
+
+When using the ```assert_equal``` to compare to hashes we need to brake them down into variables or use parenthesis as shown below. The reasons are well explained in [here](http://stackoverflow.com/questions/16569409/fetch-vs-when-working-with-hashes "hashes").
+
+```ruby
+hash = { :one => "eins", :two => "dos" }
+expected = { :one => "eins", :two => "dos" }
+assert_equal expected, hash
+#it also work like this
+assert_equal ({:one => "eins", :two => "dos" }, hash)
+```
+
+Ruby hashes are not ordered and the methods ```.keys``` and ```.values``` will return an array containing the hash keys and values respectively.  Merging two hashes will have the following behavior.
+
+```ruby
+hash = { "jim" => 53, "amy" => 20, "dan" => 23 }
+new_hash = hash.merge({ "jim" => 54, "jenny" => 26 })
+#=> new_hash = {"jim"=>54, "amy"=>20, "dan"=>23, "jenny"=>26}
+```
+The new key-value pairs will be merged on top of the existing ones. It is important to note the that the original caller hash will not be mutated in this case. If we want it to mutate we have to use the ```merge!``` method instead. We can initialize hashes with a default value. If we do that all the unassigned keys will return the default value when called, as seen below:
+
+```ruby
+hash = Hash.new("dos")
+=> {}
+hash[:a]
+#=> "dos"
+hash[:b]
+#=> "dos"
+hash
+#=> {}
+```
+It is important to note that these are just default values! to be returned in case that an unassigned key is called. They are not actually values present in the hash, as seen in the snippet above. Passing in a value will create [exactly one object](http://stackoverflow.com/questions/4410076/how-can-i-initialize-an-array-inside-a-hash-in-ruby "Default value") that will be mapped to all unassigned keys. This default value can be mutated dynamically as shown below:  
+
+```ruby
+hash = Hash.new([])
+#=> []
+hash[:a] 
+#=>[]
+hash[:a] << "one"
+#=> ["one"]
+hash[:b] << "two"
+#=> ["one", "two"]
+hash[:c]
+#=> ["one", "two"]
+```
+
+When using a block every unassigned key will be mapped to a different object, as shown below below:
+
+```ruby
+@my_hash = Hash.new {|h,k| h[k] = []}
+#=> {}
+@my_hash[:a] << "one"
+#=> ["one"]
+@my_hash[:b] << "two"
+#=> ["two"]
+```
+
+<h3 style='padding-top:15px;'><i>43 - 70 About Strings</i></h3>
+
+Both 'single' and "double" quoted strings belong to the ```String``` class and they can be used to wrap one or another as shown:
+```ruby
+"Don't quote me'"
+'I like quoting using ""'
+```
+
+For hard cases where we need to use both ```""``` ```''``` simultaneously inside the string, we can use escapes of flexible quoting:
+
+```ruby
+a = "He said, \"Don't\""
+#=>"He said, \"Don't\""
+b = %(This is a flexible quote)
+#=>"This is a flexible quote"
+```
+Note that the ```\``` are not accounted towards the size of the string and  ```a[9]``` will return the full escaped character ```"\""```. String can also be sliced in the same way as arrays by passing in two indexes.
+
+```ruby
+a="123456789"
+#=> "123456789" 
+a[0,5]
+#=> "12345"
+a[3,5]
+#=>"45678"
+```
+For really hard cases we can use flexible quoting which can handle double and single quoting. And they also support spaces
+```ruby
+a = %(flexible quotes can handle both ' and " characters)
+b = %!flexible quotes can handle both ' and " characters!
+test = %{
+foo
+}
+#=> "\nfoo\n"
+```
+And we can also use EOS but they wont account the first space:
+```ruby
+test = <<EOS
+foo
+EOS
+#=>"foo\n"
+```
+The ```test_the_shovel_operator_modifies_the_original_string``` is probably one of the most interesting test on about_strings. When we assign a variable to another we are not copying the actual value we are just copying the reference. So modifying the second variable will effectively modify the first one:
+
+```ruby
+a = []
+#=> []
+b = a
+#=> []
+b << 5
+#=> [5]
+a
+#=> [5]
+```
+On the contrary, when we reassign a variable we are effectively creating a new object as we can see below:
+```ruby
+a = "Hey, "
+#=> "Hey, "
+a.object_id 
+#=> 69778580
+a = a + "Joe"
+#=> "Hey, Joe "
+a.object_id 
+#=> 69664940
+```
+So rubyist will prefer using the shovel operator because it does not create a new object and hence is [faster](http://stackoverflow.com/questions/4684446/why-is-the-shovel-operator-preferred-over-plus-equals-when-building-a "Shovel Operator"). Double quote strings do interpret scape characters but single quoted strings do not.
+
+```ruby
+string1 = "\n"
+string2 = '\n'
+string1.size = 1
+string1.size = 2
+```
+It used to be in older rubies that you could get the ASCII representation of a character by prepending a ```?``` to it. But nowadays that only returns the corresponding string.
+
+```ruby
+# In ruby 1.8
+?a
+#=> 97
+
+# In ruby 1.9 +
+?a
+#=> "a"
+```
+Strings are unique objects with different 'objects_id' even if they contain the same values. As seen below:
+
+```ruby
+a = "a string"
+b = "a string"
+
+a == b
+#=> true
+
+a.object_id == b.object_id
+#=> false
+```
+Thanks for reading!
