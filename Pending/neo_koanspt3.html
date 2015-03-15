@@ -1,0 +1,72 @@
+<h3 style='padding-top:15px;'><i>70-83 About symbols</i></h3>
+Why ruby has symbols? There is probably a good number of reasons but [this](http://rubylearning.com/satishtalim/ruby_symbols.html "symbols") article gave me some insights. Symbols belong to the class ```Symbol``` they are different than strings. But they can also be compared. Contrary to strings symbols with equal value are infact thesame object.  
+
+```ruby
+2.1.0 :003 > a.object_id
+ => 273368 
+2.1.0 :004 > b.object_id
+ => 273368 
+2.1.0 :005 > c = :another_symbol
+ => :another_symbol 
+2.1.0 :006 > c.object_id
+ => 273448 
+2.1.0 :007 >
+```
+Thus, one can see symbols as the name of an internal id which makes them problably the simplest type of object in ruby. All the names (instance varibles, methos. classes, etc) are stored as symbols and these symbols are stored in the symbol table. In the ```test_method_names_become_symbols``` we have to transform the symbols to string because this comparison ```:something == "something"``` will always return false. On the other, hand doing this ```:a_symbol == :a_symbol``` carries little meaning because you are basically comparing the symbol against it self since they are always unique. 
+
+
+Symbols can be transform into strings and viceversa. One can interpolate strings when declaring a symbol, also when interpolating a symbol inside a string the ```.to_s``` method gets called.
+
+```ruby
+
+value = "and"
+symbol = :"cats #{value} dogs"
+symbol
+#=> "cats and dogs"
+
+symbol = :cats
+string = "It is raining #{symbol} and dogs."
+
+string  
+#=> "It is raining cats and dogs."
+```
+Symbols are only created once and can not be modified this makes them very efficient and useful when we care more about the identity instead of the value ( e.g hash key). But they are only remove from memore when the program exist so having many of them it can be very taxing, as explained [here](http://stackoverflow.com/questions/4573991/why-is-it-not-a-good-idea-to-dynamically-create-a-lot-of-symbols-in-ruby "symbol and memory") here.
+
+<h3 style='padding-top:15px;'><i>84- About Regular Expressions</i></h3>
+Regular expression have a class of their own ```Regexp```. We can test if a pattern is present on a string by using the following syntax:
+
+```ruby
+"aaaa"[/aa/]
+#=> "aa"
+```
+The following metacharacters are called [quantifiers](http://ruby-doc.org/core-1.9.3/Regexp.html#class-Regexp-label-Repetition "quantifier"):
+
+<ul>
+  <li>```?``` matches zero or one of the pattern</li>
+  <li>```+``` matches one or more of the pattern</li>
+  <li>```*``` matches zero or more of the pattern</li>
+</ul>
+
+Quantifiers target the character or expression that is directly to the left of them, they do not necesarily target the whole expression preciding them.
+
+```ruby
+"abbcccddddeeeee"[/az?/]
+#=> "a" 
+#This will match "a" and zero or one "z". In this case there is none so the return value is "a" 
+"bccc", "abbcccddddeeeee"[/bc+/]
+#=> "bccc" 
+# This will match "b" and one or more "c". In this case there are three "ccc" after the b so we get "bccc"
+#=>
+"abbcccddddeeeee"[/z*/]
+# This will match zero or more "z". In this case there is none so the return value is ""
+```
+From that last case we can conclude that the ```*``` quantifier will never fail as it will always targe at least zero occurences of whatever it's preceding it. This quatifiers ```*``` and ```+``` are greedy in the sense that they will try to match as many charecters as they can. Interestingly the left most match will wins
+
+```ruby
+"abbccc az"[/az*/]
+#=> "a"
+Since the * matches zero or more "a" complies.
+```
+The ```[]``` matches one of the options contained within. ```\s``` matches all the white spaces including regular white spaces ```" "```, tabs ``` \t```, and returns ```\n```. 
+
+
