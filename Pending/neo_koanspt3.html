@@ -1,5 +1,5 @@
 <h3 style='padding-top:15px;'><i>70-83 About symbols</i></h3>
-Why ruby has symbols? There is probably a good number of reasons but [this](http://rubylearning.com/satishtalim/ruby_symbols.html "symbols") article gave me some insights. Symbols belong to the class ```Symbol``` they are different than strings. But they can also be compared. Contrary to strings symbols with equal value are infact thesame object.  
+Why ruby has symbols? There is probably a good number of reasons but [this](http://rubylearning.com/satishtalim/ruby_symbols.html "symbols") article is a good start. Symbols belong to the class ```Symbol``` they are different than strings. But they can also be compared. Contrary to strings symbols with equal value are infact the same object.  
 
 ```ruby
 2.1.0 :003 > a.object_id
@@ -32,7 +32,7 @@ string
 ```
 Symbols are only created once and can not be modified this makes them very efficient and useful when we care more about the identity instead of the value ( e.g hash key). But they are only remove from memore when the program exist so having many of them it can be very taxing, as explained [here](http://stackoverflow.com/questions/4573991/why-is-it-not-a-good-idea-to-dynamically-create-a-lot-of-symbols-in-ruby "symbol and memory") here.
 
-<h3 style='padding-top:15px;'><i>84- About Regular Expressions</i></h3>
+<h3 style='padding-top:15px;'><i>84-110 About Regular Expressions</i></h3>
 Regular expression have a class of their own ```Regexp```. We can test if a pattern is present on a string by using the following syntax:
 
 ```ruby
@@ -68,5 +68,69 @@ From that last case we can conclude that the ```*``` quantifier will never fail 
 Since the * matches zero or more "a" complies.
 ```
 The ```[]``` matches one of the options contained within. ```\s``` matches all the white spaces including regular white spaces ```" "```, tabs ``` \t```, and returns ```\n```. 
+
+There are anchors that we can use to match the end of beginning of a string.
+
+```ruby
+"start end"[/\Astart/]
+#=> "start"
+# This will match all the "start" the they are at the beginning of a string.
+#In this case matches "start"
+"start end"[/\Aend/]
+#=> nil
+#This pattern matches all the "end" that are at the beginning of the string.
+#Since there are not end at the beginning of the string then it will return nil.
+#Similarly:
+assert_equal "end", "start end"[/end\z/]
+#=> "end"
+assert_equal nil, "start end"[/start\z/]
+#=> nil
+```
+There are also anchors that are used to match the beginning and end of a line.
+
+```ruby
+"num 42\n2 lines"[/^\d+/]
+#=> "2"
+"2 lines\nnum 42"[/\d+$/]
+#=> "42"
+```
+
+And finally there is the word boundary command ```\b``` that can be used to match the beginning or the end of a word.
+
+```ruby
+"bovine vines"[/\bvine./]
+#=> "vines"
+"bovine vines"[/.+\bvine/]
+#=> "vines"
+```
+Parenthesis provide grouping just like they would do for a math operation:
+
+```ruby
+"ahahaha"[/(ha)+/]
+#=> "hahaha"
+```
+The matches can also be extracted by using the global variables ```$```. these variables are assigned everytime a regex containing ```()``` is [matched](http://stackoverflow.com/questions/12945779/ruby-koans-regex-parentheses-capture-matched-content "Regex groups"). The amount of tests varibles created will be equal to the number of () group in the regex. For example:
+
+```ruby
+"ahahaha"[/(ha)+/]
+#=> "hahaha"
+$1
+#=> "ha"
+$2
+#=> nil
+```
+
+```(ha)+``` matches the 3 x "ha" but since there is only one group defined only one varibles is going to be assigned  ```$1 = "ha"```. 
+
+Lastly there are these three methods that are very useful: 
+
+```ruby
+"one two-three".scan(/\w+/)
+#=> ["one", "two", "three"]
+"one two-three".sub(/(t\w*)/) { $1[0, 1] }
+#=> "one t-three"
+"one two-three".gsub(/(t\w*)/) { $1[0, 1] }
+#=> "one t-t"
+```
 
 
