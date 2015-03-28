@@ -1,24 +1,7 @@
-I went to my third 
-
-
-The initial Rspec code would be like this:
+On the last workshop we created a program that keeps track of the score of a bowling game. This was a very interesting problem packed with cool topics like TDD, OO programming and even linked lists! My solution is somewhat inspired from the ["Team Projector" solution](https://github.com/k00ka/bowling-game-kata/tree/david_final "david solution"	) as I was present when we developed it :), but it also has some original insights. My full solution can be found [here](https://github.com/eduardopoleo/bowling-game-kata "solution"). The starting point is shown below: 
 
 ```ruby
-RSpec.describe BowlingGame, "#score" do
-
-  let(:game) { BowlingGame.new }
-
-  it "knows the score is 0 for a new game" do
-    expect(game.score).to eql(0)
-  end
-end
-```
-
-Initial ruby code was given as:
-
-```ruby
-require Frame
-
+#lib/bowling_game.rb
 class BowlingGame
 
   def roll(pins_knocked_down)
@@ -30,11 +13,13 @@ class BowlingGame
 private
 
 end
-
 ```
 
+<h3 style='padding-top:15px;'><i>Open Frames</i></h3>
+Open frames occur when the player is not able to knock down the 10 pins in 2 rolls. Open frames value or score is determined only by the amount of pins knocked down.  We can start by modeling open frames because they are the easiest case. 
+
 <h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1. </span>The game's score is 0 at the beginning of the game</h4>
-Again following the TDD .. of using the smalled code possible to meet the requirement we can write:
+The smalled code possible to meet this requirement would be:
 
 ```ruby
 def score
@@ -42,8 +27,8 @@ def score
 end
 ```
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>The score is 1 for a roll of 1 </h4>
-We need to somehow display the score of the game this is when we realized that the ```score``` method should be a getter method for the score attribute of the game. We can then initialize the ```@score``` at zero 
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2. </span>The score is 1 for |1| </h4>
+ In order the keep track of the scoring we need to create a score attribute and its corresponding getter method, as seen below:
 
 ```ruby
 class BowlingGame
@@ -58,17 +43,14 @@ class BowlingGame
   def score
     @score
   end
-
-private
-
 end
 ```
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3. </span> The score is 10 for a roll of 10</h4>
-This obviosly passes without any modification of the code.
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3. </span> The score is 10 for |10|</h4>
+This test passes without modifying the code.
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4. </span> The score is 6 for a roll of 2 and a roll of 4</h4>
-We need to update the score variable for every roll that is made which is pretty simple to do.
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4. </span> The score is 6 for |2,4| </h4>
+We need to update the ```@score``` variable so that it adds up the value of every roll that is made:
 
 ```ruby
 def roll(pins_knocked_down)
@@ -76,35 +58,43 @@ def roll(pins_knocked_down)
 end
 ```
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">5. </span>The score is 14 for a roll of 5 a roll of 4 and a roll of 5</h4>
-Testing for three rolls in this specific case will pass with the current code but it is still interesting to cover this case for the following reasons:
-Our current code could keep track of the score correctly if all the frames are open. 
-It will be helpful to enphtize the distinction between three consecutive rolls that do not include spare with three consecutive that include spares. 
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">5. </span>The score is 14 for |5,4|5|</h4>
+This test also pases without modifications and goes to show that our current code would work for any amount of rolls, as long as, all frames are open frames. Thus, we can start examining the spare frames.
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">6. </span>The socre is 20 for three consecutive rolls of 5.</h4>
-We can make this test pass by writting a unorthodox implementation 
+<h3 style='padding-top:15px;'><i>Spare Frames</i></h3>
+Spare frames occur when a player manage to knock down 10 pins after the two rolls of a frame. Bonus points are awarded to spares and their total value can be calculated as follows:
+
+```python
+current frame score = 10 + next frame 1st roll
+```
+The final score will then account for the ```next frame 1st value``` twice as shown in the next test case:   
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">6. </span>The score is 20 for three consecutive rolls of 5.</h4>
+Since this is a very simple case where we have a spare at the beginning of the game we can write a rather explicit code like this:
 
 ```ruby
-def roll(pins_knocked_down)
-  if @score == 10
-    @score += pins_knocked_down*2
-  else
-    @score += pins_knocked_down
+class BowlingGame
+# ..some code..
+  def roll(pins_knocked_down)
+    if @score == 10
+      @score += pins_knocked_down*2
+    else
+      @score += pins_knocked_down
+    end
   end
 end
 ```
+This code complies with this requirements but obviously falls short for most others cases.
 
-This code complies with the requirements but it only covers a very limited amount of cases. What would happen if a player scores a strike on his second turn for instance, 
-
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">7. </span>The score is 25 for rolls of 2,3,4,6,5 </h4>
-It is painfully obvious now that we need to expand the concept of frame in order to create a more general implementation of the spare. A way to aproach this would be creating a frame class that should be able to:
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">7. </span>The score is 25 for rolls of |2,3|4,6|5| </h4>
+It is painfully obvious now that we need to expand the concept of frame in order to create a more general implementation of the spare. A way to approach this would be creating a frame class that could contain the following behavior:
 
 <ol>
-  <li>Store and retrieve the pins knocked down per each roll.</li>
-  <li>Retrieve information from the next frame (Requierment for the spares).</li>
-  <li>Know whether it is spare frame or not.</li>
-  <li>Know if there are still rolls available (Max 2 rolls per frame) </li>
-  <li>Calculate its own score considrering the different possible scenarios.</li>
+  <li>Stores and retrieves the pins knocked down per each roll.</li>
+  <li>Retrieves information from the next frame (Require for spares).</li>
+  <li>Knows whether is spare or not.</li>
+  <li>Knows if there are still rolls available (Max 2 rolls per frame). </li>
+  <li>Calculates its own score considering the different possible scenarios.</li>
 </ol>
 
 Following these guidelines we can write the following code:
@@ -130,7 +120,7 @@ class Frame
 
 ##Point 3
   def spare?
-    points_from_rolls == 10
+    regular_points == 10
   end
 
 ##Point 4
@@ -139,28 +129,25 @@ class Frame
   end
 
 ##Point 5
-  def score
-    if spare? && !next_frame.rolls[0].nil? 
-      @score = points_from_rolls + next_frame.rolls[0]
-    else
-      @score = points_from_rolls
-    end
-  end
-
-  private
-  def points_from_rolls
+  def regular_points
     points = rolls.reduce(:+)
     points ? points : 0
   end
+
+  def score
+    if spare? && !next_frame.rolls[0].nil? 
+      @score = regular_points + next_frame.rolls[0]
+    else
+      @score = regular_points
+    end
+  end
 end
 ```
-Note how we are already initializing each frame with its ```next_frame``` which is going to be another instance of ```Frame```. This is what is commonly known as linked list. ```points_from_rolls``` calculates the amount of points contained in ```@rolls``` and returns zero if the frame does not contain rolls yet.
-
-Now in the BowlingGame class we want to be able to 
+Note how we are already initializing each frame with the frames that follows it: ```next_frame```. The ```next_frame``` is also going to be an instance of ```Frame``` which will set up a nice linked list type of structure. The ```regular_points``` method calculates the points coming from knocking down pins without considering bonus, and returns zero if the frame does not contain rolls yet. Now in the ```BowlingGame``` class we want to be able to: 
 
 <ol>
-  <li>Initialize the frames and store them in a ordely fashion.</li>
-  <li>Add a new rolls to frames.</li>
+  <li>Initialize the frames and store them in a orderly fashion.</li>
+  <li>Add new rolls to frames.</li>
   <li>Calculate the total number of points coming from all the frames.</li>
 </ol>
 
@@ -181,7 +168,7 @@ class BowlingGame
   def roll(pins_knocked_down)
     @frames.each do |frame| 
       if frame.has_more_rolls?
-        frame.rolls !!!!!!!!!!!!!!!!!!! pins_knocked_down
+        frame.rolls << pins_knocked_down
         break
       end
     end
@@ -194,14 +181,11 @@ class BowlingGame
     end
     @score
   end
-
-private
-
 end
 ```
-We store and initialize the frames within an array because they are ordered and really easy to access. Note how we populate the array backwards (last to first) so that we can initialize frames with already existing ```next_frame```. The obvious exeption is the tenth frame who's ```next_frame``` will be nil, as it should be. We can also make sure that our code returns the right value after two consecutive strikes. 
+We store and initialize the frames within an array because they are ordered and really easy to access. Note how we populate the array backwards (last to first) so that we can initialize a frame with an already existing ```next_frame```. The obvious exception is the 10th frame whose ```next_frame``` will be nil, as it should be. The ```roll``` method  assigns ```pins_knocked_down``` by going through all the frames until it finds one that still has rolls available. Finally the ```score``` method retrieve and adds up all the frames scores.  Since the implementation of spares is rather simple, this code can also handle different cases such as consecutive spares, multiple spares in between open frames, etc. 
 
-At this point we can probably do some refactoring. The first thing we can collapse the  ```@score``` and ```@frames``` getter methods to attr_reader :score, :frames. Also in the class BowlingGame we do not probably need to go through all the frames everytime we want to insert the knocked_down_pins. We can just keep track of the current frame check if still some rolls availables with ```has_more_rolls?``` if not we make use of the ```next_frame``` attribute to move up to the next frame in line. This will translate into the following code chages: 
+At this point we can probably do some refactoring. The first thing we can do is to collapse the  ```@rolls``` and ```@next_frame``` getter methods to ```attr_reader :rolls, :next_frame``` in the frame class. Also, in ```BowlingGame``` we probably do not need to go through all the frames every time we want to insert the ```knocked_down_pins```. We can just keep track of the current frame and check if still has some rolls available, if not we can make use of the ```next_frame``` attribute to move up to the next frame in line. This translates into the following code changes: 
 
 ```ruby
 class BowlingGame
@@ -216,23 +200,32 @@ class BowlingGame
   end
 #...some code...
 end
+```
 
-<h3 style='padding-top:15px;'><i>Implementing strikes</i></h3>
+<h3 style='padding-top:15px;'><i>Strikes</i></h3>
+Strike frames occur when a player knocks down the 10 pins on his first roll of the frame. Their value is calculated with: 
+```python
+strike frame value = 10 + next roll value + next (next) roll value
+```
+As we can see the strike score calculation is more complex because it depends on 2 future values. Based on the possible future values we can consider two important cases:
 
-We can start by analyzing the simple case in which there is only one strike 
+  I) A strike followed by an open or a spare frame
+  II) A strike followed by another strike
 
-<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">8. </span> The score is 24 for rolls of 10,4 and 3 </h4>
+We can start by analyzing the simplest case when a strike is followed by an open or a spare frame.
 
-We need to ensure that we make the following modifications to our code
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">8. </span> The score is 24 for |10|4,3|</h4>
+
+In order to implement the strikes we need to consider the following points
 
 <ol>
-  <li>Rediine the spare definition so that it does not include strikes.</li>
-  <li>Create a definition for a stike frame</li>
-  <li>Redifine has_more_rolls? so that it returns does not allow to allocate more rolls to that frame as soon as the player hits a strike </li>
-  <li>Modify the score method so that takes into accounts properly </li>
+  <li>Redefine the spare frame so that it does not include strikes.</li>
+  <li>Create a definition for a strike frame.</li>
+  <li>Redefine ```has_more_rolls?``` so that it returns ```false``` as soon as a strike is hit.</li>
+  <li>Modify the score method so that it accounts for strikes.</li>
 </ol>
 
-Applying these changes to the code we get the following code
+Considering these guidelines we get:
 
 ```ruby
 class Frame
@@ -245,7 +238,7 @@ class Frame
 
 ##Point 1
   def spare?
-    if points_from_rolls == 10 && !strike?
+    if regular_points == 10 && !strike?
       true
     else
       false
@@ -269,27 +262,30 @@ class Frame
 ##Point 4
   def score
     if spare? && !next_frame.rolls[0].nil? 
-      @score = points_from_rolls + next_frame.rolls[0]
+      @score = regular_points + next_frame.rolls[0]
     elsif strike? && !next_frame.has_more_rolls?
-      @score = points_from_rolls + next_frame.points_from_rolls
+      @score = regular_points + next_frame.regular_points
     else
-      @score = points_from_rolls
+      @score = regular_points
     end
   end
 
-  def points_from_rolls
+  def regular_points
     points = rolls.reduce(:+)
     points ? points : 0
   end
 end
 ```
 
-We do not have to modify because we are not changing the dynamics of the game only the nature of the frames. The code will also work for cases were we have two strikes that are not consecutives, for instance when rolling 10|4,3|10|2,1. Now lets analyze the case when we have 2 consecutive strikes according to this [link](http://en.wikipedia.org/wiki/Strike_%28bowling%29 "strike"). This is what would happen:
+ The code will also work for cases were we have two strikes that are not consecutive, for instance when rolling 10|4,3|10|2,1. It is important to note that we do not need to touch the ```BowlingGame``` class since we are not changing the dynamics of the game only the nature of the frames.
 
-Frame 1, ball 1: 10 pins (strike)
-Frame 2, ball 1: 10 pins (strike)
-Frame 3, ball 1: 4 pins
-Frame 3, ball 2: 2 pins
+ <h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">9. </span>The score is 46 for |10|10|4,2|</h4>
+ Now lets analyze the case when we have 2 consecutive strikes. According to this [link](http://en.wikipedia.org/wiki/Strike_%28bowling%29 "strike") we could visualize the result as follows:
+
+Frame 1, roll 1: 10 pins (strike)
+Frame 2, roll 1: 10 pins (strike)
+Frame 3, roll 1: 4 pins
+Frame 3, roll 2: 2 pins
 
 The score from these throws is:
 
@@ -298,7 +294,7 @@ Frame two: 10 + (4 + 2) = 16
 Frame three: 4 + 2 = 6
 TOTAL = 46
 
-So the initial strike would take into account the 10 points of the following strike and the points for of the first roll of the third frame. We just have to modify the score method to account for those extra points added.
+So the initial strike frame would have a bonus of 10 points (coming from the next strike) and 4 (coming from roll 1 of frame 3). We need to modify our code in order to account for these extra bonus points.
 
 ```ruby
 #lib/frame.rb
@@ -306,30 +302,33 @@ class Frame
 #...code...
   def score
     if spare? && !next_frame.rolls[0].nil? 
-      @score = points_from_rolls + next_frame.rolls[0]
+      @score = regular_points + next_frame.rolls[0]
     elsif strike? && !next_frame.has_more_rolls?
       if next_frame.strike? && !next_frame.next_frame.has_more_rolls?
         @score = 20 + next_frame.next_frame.rolls[0]
       else
-        @score = 10 + next_frame.points_from_rolls
+        @score = 10 + next_frame.regular_points
       end
     else
-      @score = points_from_rolls
+      @score = regular_points
     end
   end
 end
 ```
-Once again the BowlingGame class stays the same. The method score is getting ugly we could refactor it to make it more readable for other developers. We just need to create some private methods with more descriptive names:
+
+This code also will work for the case where we have 3 consecutive strikes e.g |10,10,10|. Once more the ```BowlingGame``` class stays the same. The method score is getting ugly we could re-factor it to make it more readable for other developers. We just need to create some private methods with more descriptive names:
 
 ```ruby
 class Frame
+  # ..some code..
+
   def score
     if spare_scoring_applies? 
       spare_scoring
     elsif strike_scoring_applies? 
       strike_scoring
     else
-      @score = points_from_rolls
+      @score = regular_points
     end
   end
 
@@ -344,20 +343,114 @@ class Frame
   end
 
   def spare_scoring
-    @score = points_from_rolls + next_frame.rolls[0]
+    @score = regular_points + next_frame.rolls[0]
   end
 
   def strike_scoring
     if next_frame.strike? && !next_frame.next_frame.has_more_rolls?
       @score = 20 + next_frame.next_frame.rolls[0]
     else
-      @score = 10 + next_frame.points_from_rolls
+      @score = 10 + next_frame.regular_points
     end
   end
 end
 ```
+<h3 style='padding-top:15px;'><i>The 10th frame</i></h3>
+The 10th frame is different than the regular frames mostly because is the last. This has some implications when calculating both its own and the 9th frame's score. Another important difference is that if the player scores a spare or a strike a third roll is added to the frame. With this considerations we say that the 10th frame should:
+
+<ul>
+  <li>Behave like a regular frame if is open.</li>
+  <li>Get an extra roll for spares and strikes.</li>
+  <li>Manage odd edge cases related with strikes on the 9th frame.</li>
+  <li>Calculates its own score just from its face value because there are not next frames.</li>
+</ul>
 
 
+For the 10th frame we are also going to have two main cases to consider:
+
+I) An open or spare 9th frame
+II) A strike 9th frame followed by a strike on the 10th
 
 
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">10.</span> The score is 102 for 9x|4,4| and |10,10,10| </h4>
+We are going to start by analyzing the simpler case I) of an open 9th frame. The 10th frame is so particular that it probably deserves a class of its own. We can make it inherit from ```Frame``` in order to preserve some common behavior. The 10th frame can then look like this:
 
+```ruby
+class TenthFrame < Frame
+  attr_reader :rolls
+  
+ #There is no next_frame attribute in this case 
+  def initialize
+    @rolls = []
+  end
+
+# Note how the definition of strike? changes to accommodate the possibility of multiple strike rolls. 
+  def strike?
+    if rolls[0] == 10 || rolls[1] == 10 
+      true
+    else
+      false
+    end
+  end
+
+# has_more_rolls? also changes because there can be more than 2 rolls now.
+  def has_more_rolls?
+    if !spare? && !strike? && rolls.size == 2 
+      false
+    elsif rolls.size == 3
+      false
+    else
+      true
+    end
+  end
+
+# The scoring system is simpler because it does not depend from other frames rolls.
+  def score
+    points = rolls.reduce(:+)
+    points ? points : 0
+  end
+end
+```
+On the ```BowlingGame``` class we need to include the 10th frame when we initialize it.   
+
+```ruby
+def initialize
+  @score = 0
+  @frames = []
+  @frames[9] = TenthFrame.new
+
+  8.downto(0) do |n|
+    @frames[n] = Frame.new(@frames[n+1]) 
+  end
+
+  @current_frame = @frames[0] 
+end
+```
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">11.</span>The score is 300 for 9x|10| and |10|10|10|  </h4>
+
+We have already defined the behavior of the 10th frame but we also must modify the regular frame ```scoring_method``` so that takes into account the 10th frame. Specifically we want to avoid our program breaking from this nasty edge case:
+
+Frame 9, roll 1: 10 pins (strike)
+Frame 10, roll 1: 10 pins (strike)
+
+What will happen is that our 9th frame will recognize that the 10th frame is a strike and will assume that it does not have more available rolls. As a consequence, it will try to fetch the first roll of the 11th frame in order to complete its scoring, and since this frame does not exist our code will break. So we need to modify the ```strike_scoring``` method to account for this: 
+
+
+```ruby
+#lib/frame.rb
+def strike_scoring
+  if next_frame.class == TenthFrame 
+    if next_frame.rolls.size >= 2
+      @score = 10 + next_frame.rolls[0,2].reduce(:+)
+    else
+      @score = regular_points
+    end
+  elsif next_frame.strike? && next_frame.next_frame.rolls.size >= 1
+    @score = 20 + next_frame.next_frame.rolls[0]
+  else
+    @score = 10 + next_frame.regular_points
+  end
+end
+```
+
+That's it. On my [final solution](https://github.com/eduardopoleo/bowling-game-kata "solution") I re-factored the scoring methods to look a bit more clear and concise but this code as it appears here can effectively keep track of of the score of a real bowling game :). Thanks for reading. 
