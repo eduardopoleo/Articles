@@ -1,241 +1,4 @@
-Boostrap form_for
-= bootstrap_form_for(@user) do |f|
-  = f.email_field :email
-  = f.text_field :full_name
-  = f.password_field :password
-  = f.submit "Sing Up"
 
-Important expectation
-
-eq
-be_new_record
-be_instace_of
-render_template
-redirect_to
-be_present
-match_array #matches the array without considering the order
-
-Fabricators syntax
-post :create, user: Fabricate.attributes_for(:user)
-post :create, email: 'joe@gmail.com', password: 'password'
-
-Routing
-get '/patients/:id', to: 'patients#show', as: 'patient'
-
-Error in routing are due to missing params or errors in the route definition
-no black magic eduardo
-
-Updating rails attributes
-validates
-belongs_to
-has_many
-@user.update_attribute(:admin, true)
-
-
-
-Serving images.
-Put images in the assets/images
-and the use the image_tag in rails 
-= image_tag('dog.png', :class => "img-responsive")
-image reponsive makes you image adapt to the display
-
-
-Testing emails
-it 'sends and email to a friend' do
-  post :create, invitation: {guest_name: 'Joe', guest_email: 'joe@example.com', invitation_message: 'Hey come and join me at Myflix'}
-  expect(ActionMailer::Base.deliveries.last.to).to eq(["joe@example.com"])
-end
-
-after do
-  ActionMailer::Base.deliveries.clear
-end
-We use this to clear up emails to be sure that other specs will not break
-
-had this problem
-No route matches {:action=>"dashboard", :controller=>"users"} 
-What it means is that I am not passing all the necesary arguments to complete the members route 
-get :dashboard is not enough and passing the id is required
-get :dashboard, id: joe.id
-
-
-Stripe
-An example of stripe payment form
-= bootstrap_form_for(@user) do |f|
-  %header
-    %h2 Sign up!
-  %fieldset
-    = f.email_field :email
-    = f.text_field :full_name
-    = f.password_field :password
-  %fieldset.credit_card
-    %span.payment-errors
-    .form-group
-      %label.control-label(for='credit-card-number') Credit Card Number
-      %input.form-control#credit-card-number(type="text" data-stripe = "number")
-    .form-group
-      %label.control-label(for='security-code') Security Code
-      %input.form-control#security-code(type="text" data-stripe = "cvc")
-    .form-group
-      %label.control-label Expiration
-      = select_month(Date.today, {add_month_numbers: true},  class: 'form-control', data: {stripe: "exp-month"})
-      %br
-      = select_year(Date.today.year, {start_year: Date.today.year, end_year: Date.today.year + 4}, class: 'form-control', data: {stripe: "exp-year"})
-  %fieldset.actions.control-group
-    .controls
-      %input(type="submit" value="Sign Up" class="btn btn-default")
-
-
-TODO
-Update article about the set up to include to bootstrap Tomas recomendation
-Update article about mailers to include how to test mailers
-Update article about testing to include important expectations
-Update stripe article to make a better introduction about the set up 
-Update hash value article to include that when hashes are initiliazed with a value j
-Update forgot password article with routes and make it more understandable.
-
-Article about recurrig billing on stripe
-
-Set up:
-
-Install the gem:
-```ruby
-gem 'stripe', :git => 'https://github.com/stripe/stripe-ruby'
-```
-```ruby
-#config/initializers/stripe.rb
-Rails.configuration.stripe = {
-  :secret_key      => ENV['stripe_secret_key']
-  :publishable_key => ENV['stripe_publishable_key'],
-}
-
-Stripe.api_key = Rails.configuration.stripe[:secret_key]
-```
-Add the stripe attributes to the rails forms
-From there are two ways: set up the payment widget
-
-Or the prefferred one to create a custom form
-
-```python
-#views/users/new
-= bootstrap_form_for(@user) do |f|
-  %header
-    %h2 Sign up!
-  %fieldset
-    = f.email_field :email
-    = f.text_field :full_name
-    = f.password_field :password
-  %fieldset.credit_card
-    %span.payment-errors
-    .form-group
-      %label.control-label(for='credit-card-number') Credit Card Number
-      %input.form-control#credit-card-number(type="text" data-stripe = "number")
-    .form-group
-      %label.control-label(for='security-code') Security Code
-      %input.form-control#security-code(type="text" data-stripe = "cvc")
-    .form-group
-      %label.control-label Expiration
-      = select_month(Date.today, {add_month_numbers: true},  class: 'form-control', data: {stripe: "exp-month"})
-      %br
-      = select_year(Date.today.year, {start_year: Date.today.year, end_year: Date.today.year + 4}, class: 'form-control', data: {stripe: "exp-year"})
-  %fieldset.actions.control-group
-    .controls
-      %input(type="submit" value="Sign Up" class="btn btn-default")
-```
-We need to set up the necessary java scrip for this
-
-```python
-#views/layouts/application.html.haml
-!!!
-%html
-  %head
-    %title Firecamp
-    = csrf_meta_tags
-    = stylesheet_link_tag    'application'
-    = javascript_include_tag 'application'
-    = yield :head 
-  %body
-    = yield
-
-#app/views/new.html.haml
-= content_for :head do 
-  %script{:src => "https://js.stripe.com/v2/", :type => "text/javascript"}
-  :javascript
-    Stripe.setPublishableKey("#{ENV['PUBLISHABLE_KEY']}");
-  = javascript_include_tag 'payment'
-```
-
-We create the payment.js file 
-
-```javascript
-#app/assets/javascript/payment.js
-jQuery(function($) {
-  $('#new_user').submit(function(event) {
-    var $form = $(this);
-
-    // Disable the submit button to prevent repeated clicks
-    $form.find('button').prop('disabled', true);
-
-    Stripe.card.createToken($form, stripeResponseHandler);
-
-    // Prevent the form from submitting with the default action
-    return false;
-  });
-});
-
-function stripeResponseHandler(status, response) {
-  var $form = $('#new_user');
-
-  if (response.error) {
-    // Show the errors on the form
-    $form.find('.payment-errors').text(response.error.message);
-    $form.find('button').prop('disabled', false);
-  } else {
-    // response contains id and card, which contains additional card details
-    var token = response.id;
-    // Insert the token into the form so it gets submitted to the server
-    $form.append($('<input type="hidden" name="stripeToken" />').val(token));
-    // and submit
-    $form.get(0).submit();
-  }
-};
-```
-
-if we get the following error of the sort ```Asset filtered out and will not be served:``` we just need to the following 
-
-Now becareful with this because if you do that your Js asset might get serve twice and in this case means that your form will be summited twice again.
-So make sure that when testing you check your log so that you notice that you are not serving the asset twice
-
-Now finally we can just paste a little stripe snippet into the user create action in order to test that our set up is working correctly.
-
-```ruby
-#app/controllers/users_controller.rb
-def create
-  @user = User.new(user_params)
-  if @user.save 
-    @amount = 777 
-
-    charge = Stripe::Charge.create(
-      :card  => params[:stripeToken],
-      :amount      => @amount,
-      :description => "Payment for #{@user.email}",
-      :currency    => 'usd'
-    )
-
-    AppMailer.welcome_notification(@user).deliver
-    flash[:success] = 'Welcome to Firecamp! Hope you enjoy the experience'
-    @user.update_attribute(:admin, true)
-    session[:user_id] = @user.id
-    redirect_to dashboard_user_path(@user)
-  else
-    render :new
-  end
-end
-```
-
-And if our set up is working fine we should be seeing that payment prosecced in our stripe dashboard.
-
-e have to be carefull 
-So far until now we've been hitting the wire all the time to test our wrapper but that is undesirable because
 
 Webmock and vcr integration when dealing with external APIs 
 Web mock and vrc are used to simulate a response from an external api library. 
@@ -261,6 +24,19 @@ RSpec.configure do |c|
   c.treat_symbols_as_metadata_keys_with_true_values = true
 end
 ```
+
+Now all for all the spec where we want to use vcr we just need to add a ```:vcr``` symbol just like this:
+
+```ruby
+it "charges the card successfully", :vcr do
+  response = StripeWrapper::Charge.create(amount: 300, card: valid_token)
+  expect(response).to be_successful
+end
+```
+
+
+
+
 
 Now the first time the test will actully go to the wire and then it will store all the information in a cassette file under the spec/cassettes directory. After thisit will run the spec with the information stored here 
 
@@ -550,7 +326,6 @@ config.use_transactional_fixtures = false
 VCR::Errors::UnhandledHTTPRequestError:
 We also need to add this bit of configuration to the spec helper
 to the VCR configuaration
-c.ignore_localhost = true
 
 StaleElementReference Error Element not found in the cache
 We fix just by adding searching another word
@@ -672,57 +447,6 @@ t.integer :amount
 t.string :reference_id
 
 ////////////////Flash messages/////
-```ruby
-#application_helper.rb
-module ApplicationHelper
-  def bootstrap_class_for(flash_type)
-    case flash_type
-      when "success"
-        "success"   # Green
-      when "error"
-        "danger"    # Red
-      when "alert"
-        "warning"   # Yellow
-      when "notice"
-        "info"      # Blue
-      else
-        flash_type.to_s
-    end
-  end
-end
-
-#views/shared/_flash.html.haml
-module ApplicationHelper
-  def bootstrap_class_for(flash_type)
-    case flash_type
-      when "success"
-        "success"   # Green
-      when "error"
-        "danger"    # Red
-      when "alert"
-        "warning"   # Yellow
-      when "notice"
-        "info"      # Blue
-      else
-        flash_type.to_s
-    end
-  end
-end
-
-views/layouts/application.html.haml
-%html
-  %head
-    %title Firecamp
-    = csrf_meta_tags
-    = stylesheet_link_tag    'application'
-    = javascript_include_tag 'application'
-    %link{:href => "//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css", :rel => "stylesheet"}/
-    = yield :head 
-  %body
-    =  render 'shared/navbar'
-    =  render 'shared/flash'
-    = yield
-```
 
 Install the carrierwave-aws gem
 ```ruby
@@ -738,13 +462,3 @@ CarrierWave.configure do |config|
   }
 end
 ```
-SErving assests
-Hey Brandon,
-Thanks I solved the issue by adding:
-
-#production.rb
-config.assets.compile = true
-config.assets.precompile =  ['*.js', '*.css', '*.css.erb'] 
-
-and running rake assets:precompile
-I saw that you do not recommend precompiling the assets locally, why is that? Should we use Capistrano to automate this, is that what the link suggests?

@@ -1,0 +1,155 @@
+Here's a collections of things that I find myself sometimes looking over and over again through the web. I decided to gather them in order to avoid future pain.  
+
+<h3 style='padding-top:15px;'><i>Flash messages</i></h3>
+A simple way to implement a fairly good looking flash messages with bootstrap 3 in rails.
+
+```ruby
+#application_helper.rb
+module ApplicationHelper
+  def bootstrap_class_for(flash_type)
+    case flash_type
+      when "success"
+        "success"   # Green
+      when "error"
+        "danger"    # Red
+      when "alert"
+        "warning"   # Yellow
+      when "notice"
+        "info"      # Blue
+      else
+        flash_type.to_s
+    end
+  end
+end
+
+#views/shared/_flash.html.haml
+- flash.each do |type, message|
+  .container
+    %div{:class => "alert alert-#{bootstrap_class_for(type)} fade in"}
+      %button.close{"data-dismiss" => "alert"} ×
+      = message
+      
+views/layouts/application.html.haml
+%html
+  %head
+    %title Firecamp
+    = csrf_meta_tags
+    = stylesheet_link_tag    'application'
+    = javascript_include_tag 'application'
+    = yield :head 
+  %body
+    =  render 'shared/navbar'
+    =  render 'shared/flash'
+    = yield
+```
+<h3 style='padding-top:15px;'><i>Assests not showing up in production</i></h3>
+Sometimes my assets are not properly displayed in heroku's server. This apparently is a fairly common problem but with many different causes. The following recipe has consistently worked for me.
+
+```ruby
+#production.rb
+config.assets.compile = true
+config.assets.precompile =  ['*.js', '*.css', '*.css.erb'] 
+
+#console
+rake assets:precompile
+```
+
+<h3 style='padding-top:15px;'><i>Testing miscellaneous in Rspec </i></h3>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1. </span>Common expectations</h4>
+It is unlikely that I will forget these as I use them all the time, but still thought it was worth mentioning them.
+
+```ruby
+eq
+be_new_record
+be_instace_of
+render_template
+redirect_to
+be_present
+be_a_new
+match_array #matches the array without considering the order
+be_truthy
+```
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Test to redirect :back</h4>
+Tests the <code>redirect_to :back</code> response.
+```ruby
+  #We set up the fake host and then test the response to it
+  request.env["HTTP_REFERER"] = "http://fake.host"
+  expect(response).to redirect_to "http://fake.host"
+```
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">3.</span> Test mail delivery</h4>
+Testing mail deliveries:
+
+```ruby
+  it 'sends and email to a friend' do
+    post :create, invitation: {guest_name: 'Joe', guest_email: 'joe@example.com', invitation_message: 'Hey come and join me at Myflix'}
+    expect(ActionMailer::Base.deliveries.last.to).to eq(["joe@example.com"])
+  end
+  
+  #To make sure that the we erase all the mails in the test environment
+  after do
+    ActionMailer::Base.deliveries.clear
+  end
+```
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">4.</span>Raising errors</h4>
+This is an odd case that requires using { } instead of the regular ().
+```ruby
+it 'raises an exception when the string contains a negative number' do
+  expect{StringCalculator.add("//:4:-145677")}.to raise_error(RuntimeError,'You have negative numbers')
+end
+```
+
+<h3 style='padding-top:15px;'><i>Useful one-liners</i></h3>
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">1.</span> Deleting ghost records</h4>
+Sometimes we want to prevent unsaved records from being added to an array of records. A good example of this is the typical blog application where we the comments form is the same view where all the comments are listed, which corresponds to the article show page (e.g [Getting started blog](http://guides.rubyonrails.org/getting_started.html "blog"	). What happens is that if the new comment fails validation we will have an undesired empty comment showing up on the view when it gets rendered.  
+
+To avoid this when can use a very useful one liner.
+
+```ruby
+class CommentsController < ApplicationController
+  def create
+    @article = Article.find(params[:article_id])
+    @comment = @article.comments.build(comment_params)
+    if @commment.save
+      redirect_to article_path(@article)
+    else
+      #this is the magical one liner
+      @comments = @article.comments.to_a.delete_if(&:new_record?)
+      render 'article/show'
+    end
+  end
+end
+```
+Note how we need to transform the collection into an array using the ```.to_a``` method, this is because the ```ActiveRecord::Associations::CollectionProxy``` does not have many iterative methods such as ```delete_if```. 
+
+<h4 style='padding-top:15px; font-weight: bold;'><span style = "color:#7D8B31; font-size:18px;">2.</span> Multiple associated records.</h4>
+It is also very common that we need to set up several associations when saving a record which would be a pain if we had to do each of them on a different line. The same blog example applies when we want to save a comment and we need to associate it with an article and a user.
+
+```ruby
+class CommentsController < ApplicationController
+  def create
+    @article = Article.find(params[:article_id])
+    #pain
+    @comment = Comment.new(comment_params)
+    @comment.article = @article
+    @comment.user = current_user
+    ###
+    if @commment.save
+      redirect_to article_path(@article)
+    else
+      @comments = @article.comments.to_a.delete_if(&:new_record?)
+      render 'article/show'
+    end
+  end
+end
+```
+
+We can reduce this by:
+
+```ruby
+@comment = @article.comments.build(comment_params.merge!(user: current_user)) 
+```
+And this have the exact same effect as the 3 lines above.

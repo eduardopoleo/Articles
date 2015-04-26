@@ -1,0 +1,128 @@
+A while ago I wrote a couple of articles on how to build a wrapper for the stripe API, but I did not explain how to get started with API itself.
+First we need to install the stripe's gem and add a bit of configuration.
+
+```ruby
+#Gemfile
+gem 'stripe', :git => 'https://github.com/stripe/stripe-ruby'
+
+#config/initializers/stripe.rb
+Rails.configuration.stripe = {
+  :secret_key      => ENV['stripe_secret_key']
+  :publishable_key => ENV['stripe_publishable_key'],
+}
+
+Stripe.api_key = Rails.configuration.stripe[:secret_key]
+```
+Note: I use [Figaro](https://github.com/laserlemon/figaro "Figaro") to manage my environment variables. 
+
+After this we need to set up the corresponding form attributes and the javascript stripe call. 
+
+```python
+#views/users/new
+= content_for :head do 
+  %script{:src => "https://js.stripe.com/v2/", :type => "text/javascript"}
+  :javascript
+    Stripe.setPublishableKey("#{ENV['PUBLISHABLE_KEY']}");
+  = javascript_include_tag 'payment'
+
+= bootstrap_form_for(@user) do |f|
+  %header
+    %h2 Sign up!
+  %fieldset
+    = f.email_field :email
+    = f.text_field :full_name
+    = f.password_field :password
+  %fieldset.credit_card
+    %span.payment-errors
+    .form-group
+      %label.control-label(for='credit-card-number') Credit Card Number
+      %input.form-control#credit-card-number(type="text" data-stripe = "number")
+    .form-group
+      %label.control-label(for='security-code') Security Code
+      %input.form-control#security-code(type="text" data-stripe = "cvc")
+    .form-group
+      %label.control-label Expiration
+      = select_month(Date.today, {add_month_numbers: true},  class: 'form-control', data: {stripe: "exp-month"})
+      %br
+      = select_year(Date.today.year, {start_year: Date.today.year, end_year: Date.today.year + 4}, class: 'form-control', data: {stripe: "exp-year"})
+  %fieldset.actions.control-group
+    .controls
+      %input(type="submit" value="Sign Up" class="btn btn-default")
+```
+The <code>data-stripe</code> and the  <code>data: {stripe: " "}</code> will tell Stripe where to find the attributes needed in order to create a ```stripeToken``` which will be required to process the payment later.
+
+We also need to make sure that our application layout can read the head of our view:
+
+```python
+#views/layouts/application.html.haml
+!!!
+%html
+  %head
+    %title Firecamp
+    = csrf_meta_tags
+    = stylesheet_link_tag    'application'
+    = javascript_include_tag 'application'
+    # This is needed to render the head do portion in the new template 
+    = yield :head 
+  %body
+    = yield
+```
+
+We then have to create a payment.js file that will 1) retrieve the information from our form and send it to the Stripe's servers, and 2) send the resulting <code>StripeToken</code> back to our app server. For more info check the [Stripe's custom builder guide](https://stripe.com/docs/tutorials/forms "stripe builder")
+
+```javascript
+#app/assets/javascript/payment.js
+jQuery(function($) {
+  $('#new_user').submit(function(event) {
+    var $form = $(this);
+
+    // Disable the submit button to prevent repeated clicks
+    $form.find('button').prop('disabled', true);
+
+    Stripe.card.createToken($form, stripeResponseHandler);
+
+    // Prevent the form from submitting with the default action
+    return false;
+  });
+});
+
+function stripeResponseHandler(status, response) {
+  var $form = $('#new_user');
+
+  if (response.error) {
+    // Show the errors on the form
+    $form.find('.payment-errors').text(response.error.message);
+    $form.find('button').prop('disabled', false);
+  } else {
+    // response contains id and card, which contains additional card details
+    var token = response.id;
+    // Insert the token into the form so it gets submitted to the server
+    $form.append($('<input type="hidden" name="stripeToken" />').val(token));
+    // and submit
+    $form.get(0).submit();
+  }
+};
+```
+
+Finally, with the <code>stripeToken</code> we can proceed to create a charge in our controller.
+```ruby
+#app/controllers/users_controller.rb
+def create
+  @user = User.new(user_params)
+  if @user.save 
+    @amount = 777 
+    
+    #This is the actual API call that makes the charge
+    charge = Stripe::Charge.create(
+      :card  => params[:stripeToken],
+      :amount      => @amount,
+      :description => "Payment for #{@user.email}",
+      :currency    => 'usd'
+    )
+    redirect_to dashboard_user_path(@user)
+  else
+    render :new
+  end
+end
+```
+If everything works fine we should start seeing the payments on our stripe dashboard.

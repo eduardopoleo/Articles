@@ -1,51 +1,81 @@
-Carrierwave will allows us to upload images into our application. In production we can set it up so that the images get saved into the file directory and in production we can make it to upload the files into our Amazon S3 buckets. First we need to install these two gems.
+<h3 style='padding-top:15px;'><i>Carrierwave</i></h3>
+Carrierwave allows us to upload images into our application. In order to set it up first we need to install the gem by 
 
+```ruby
+#Gemfile
+gem "carrierwave" 
+```
 
-gem "carrierwave" uploading
-gem "mini_magick" image processing
+Then we need to add an attribute of type string to the respective table, in this case the users table.
 
 ```ruby
 class AddLargeCoverToVideos < ActiveRecord::Migration
   def change
-    add_column :videos, :large_cover, :string
-    add_column :videos, :small_cover, :string
-    remove_column :videos, :small_cover_url
-    remove_column :videos, :large_cover_url
+    add_column :user, :avatar, :string
   end
 end
 ```
+We then run this generator
 
 ```ruby
-#video.rb
-mount_uploader :large_cover, LargeCoverUploader
-mount_uploader :small_cover, SmallCoverUploader
+rails generate uploader Avatar
 ```
 
-Create a directory under app call uploarders
+which will generate the following file ```app/uploaders/avatar_uploaders.rb``` where we will write:
 
-```phyton
-!mkdir app/uploaders/
+```ruby
+class AvatarUploader < CarrierWave::Uploader::Base
+  storage :file
+end
+```
+To indicate that we want to store the uploaded files into the public directory of our application. We then need to mount the uploader so that carrier_wave knows under which attribute must save the image url.
+
+```ruby
+#app/models/user.rb
+class User < ActiveRecord::Base
+  mount_uploader :avatar, AvatarUploader
+end
 ```
 
+Finally we need to add the a file field in our form to be able to upload the picture:
 
-```phyton
-%section.admin_add_video
-  .container
-    .row
-      .col-md-10.col-md-offset-1
-        =bootstrap_form_for [:admin, @video], layout: :horizontal, label_col: 'col-sm-2', control_col: 'col-sm-5'  do |f|
-          %ul.nav.nav-tabs
-            %li
-              %a(href="/ui/admin_views_payments") Recent Payments
-            %li.active
-              %a(href="") Add a New Video
-          %fieldset
-            = f.text_field :title, class: 'col-sm-5' 
-            = f.collection_select(:category_id, Category.all, :id, :title, :include_blank => 'Please select a category', class: "col-sm-5")
-            = f.text_area :description, rows: 8, class: 'col-sm-5'
-            = f.file_field :large_cover, class: "btn btn-file"
-            = f.file_field :small_cover, class: "btn btn-file"
-          %fieldset.actions.form-group
-            .col-sm-2.col-md-offset-2
-              %input(type="submit" value="Add Video" class="btn btn-default")
+```ruby
+#users/edit.html.haml
+row
+  .col-xs-3
+    = render "shared/sidebar"
+  .col-xs-5.main-column
+    = bootstrap_form_for(@user) do |f|
+      = f.email_field :email
+      = f.text_field :full_name
+      = f.password_field :password
+      = f.file_field :avatar, class: 'btn btn-file'
+      = f.submit "Update Profile!"
 ```
+
+<h3 style='padding-top:15px;'><i>Amazon S3</i></h3>
+We would normally want to upload our pictures in a place other than our app file directory. We could use amazon S3 server for that purpose. First we need to create an account in the [amazon S3 services ]("http://aws.amazon.com/s3/ "Amazon"), then we can follow this [tutorial](http://blog.danielle.tuckerlabs.com/post/60491757671/creating-a-simple-aws-s3-bucket-with-iam-access "amazon"	) to create a bucket and also to add the correct user privileges.
+
+We can install the [amazon-aws]("https://github.com/sorentwo/carrierwave-aws "amazon gem") and proceed to create a corresponding carrierwave configuration file.
+
+```ruby
+#Gemfile
+gem carrierwave-aws
+
+#config/initializers/carrier_wave.rb
+CarrierWave.configure do |config|
+  config.storage    = :aws
+  config.aws_bucket = ENV.fetch('S3_BUCKET_NAME')
+  config.aws_acl    = :public_read
+  config.aws_authenticated_url_expiration = 60 * 60 * 24 * 365
+
+  config.aws_credentials = {
+    access_key_id:     ENV.fetch('AWS_ACCESS_KEY_ID'),
+    secret_access_key: ENV.fetch('AWS_SECRET_ACCESS_KEY')
+  }
+end
+```
+
+Finally we have to make sure to erase the ```storage :file``` from our uploader since we are not storing the files on the file directory anymore. 
+
+

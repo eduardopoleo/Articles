@@ -1,0 +1,133 @@
+<h3 style='padding-top:15px;'><i>VCR</i></h3>
+When we are testing a work-flow that involves a call to an external server (e.g when using a service API)  we do not really want to be hitting the service server every time we run our test suite. Instead we can use the Vcr/webmock combo to record a real response the first time we issue a request, and then run our subsequent requests against the recording.
+
+To get started we need to install both the vcr and the webmock libraries.
+
+Install the gem
+```ruby
+group :test do 
+  gem 'vcr'
+  gem 'webmock'
+end
+```
+In order to integrate vcr with rspec we are going to use the [rspec metadata](https://www.relishapp.com/vcr/vcr/v/2-4-0/docs/test-frameworks/usage-with-rspec-metadata "vcr configuration"), which have us copying the following code into our spec_helper file.
+
+```ruby
+#spec/spec_helper.rb
+require 'vcr'
+
+VCR.configure do |c|
+  c.cassette_library_dir = 'spec/cassettes'
+  c.hook_into :webmock
+  c.configure_rspec_metadata!
+end
+
+RSpec.configure do |c|
+  c.treat_symbols_as_metadata_keys_with_true_values = true
+end
+```
+Now we need to add :vcr to all the specs we wish to record the response 
+
+```ruby
+it "charges the card successfully", :vcr do
+  response = StripeWrapper::Charge.create(amount: 300, card: valid_token)
+  expect(response).to be_successful
+end
+```
+
+<h3 style='padding-top:15px;'><i>Feature tests with javascript</i></h3>
+In order to run feature tests that involve a stripe call we need a driver that supports javascript. The default js driver for Capybara is the Selenium driver which we can enable by simply adding ```:js => true``` to our feature spec as seen below:
+
+```ruby
+require 'spec_helper'
+
+feature "User sign up", :vcr do
+  scenario "with valid user and payment info", :js => true do
+    visit new_user_path
+    fill_in_user_info('john@gmail.com')
+    fill_in_payment_info('4242424242424242')
+    click_button('Join Us!')
+    expect(page).to have_content('Welcome to Firecamp!') 
+    click_link('session-button')
+    click_link('Log Out')
+  end
+end
+```
+We also need a bit of extra configuration for this to work properly since the Selenium driver is known to have problems with transactional database rollbacks. So we need to use another method to clean our test database once the specs have run. For this we can use the [database_cleaner](https://github.com/DatabaseCleaner/database_cleaner "database_cleaner") gem.
+
+
+```ruby
+gem 'database_cleaner'
+```
+
+Then we need to add the following configuration to switch from transactions to truncation.
+
+```ruby
+#spec_helper
+require 'database_cleaner'
+
+VCR.configure do |c|
+  c.ignore_localhost = true
+end
+
+
+RSpec.configure do |config|
+  config.use_transactional_fixtures = false
+
+  config.before(:suite) do
+    DatabaseCleaner.clean_with(:truncation)
+  end
+
+  config.before(:each) do
+    DatabaseCleaner.strategy = :truncation
+  end
+
+  config.before(:each, :js => true) do
+    DatabaseCleaner.strategy = :truncation
+  end
+
+  config.before(:each) do
+    DatabaseCleaner.start
+  end
+
+  config.after(:each) do
+    DatabaseCleaner.clean
+  end
+end
+```
+<h3 style='padding-top:15px;'><i>Capybara mails</i></h3>
+
+Many of the work-flows that involve some sort of payment are usually followed by a confirmation email, so it is not surprising that we would like to include this into our feature tests. We also need to add a bit more of configuration to allow capybara to "open" the emails sent.
+
+We first need to install the capybara-email gem into our test group.
+
+```ruby
+group :test do
+  gem 'capybara-email'
+end
+```
+Then we need to require the gem:
+
+```ruby
+#spec_helper
+require 'capybara/email/rspec'
+```
+
+Finally the usage is pretty simple. We can write a feature specs that look something like this:
+
+```ruby
+feature "User sign up" do
+  scenario "with valid user and payment info" do
+    john = Fabricate(:user, email: 'john@gmail.com', password: 'password', full_name: 'John Modales')
+    visit root_path
+    click_link('Forgot Password?')
+    fill_in('user_email', with: 'john@gmail.com')
+    click_button('Send Email')
+
+    #these two methods are provided by the gem
+    open_email(john.email)
+    current_email.click_link('Reset My Password')
+    expect(page).to have_content('New Password')
+  end
+end
+```
