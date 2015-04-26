@@ -1,0 +1,750 @@
+Boostrap form_for
+= bootstrap_form_for(@user) do |f|
+  = f.email_field :email
+  = f.text_field :full_name
+  = f.password_field :password
+  = f.submit "Sing Up"
+
+Important expectation
+
+eq
+be_new_record
+be_instace_of
+render_template
+redirect_to
+be_present
+match_array #matches the array without considering the order
+
+Fabricators syntax
+post :create, user: Fabricate.attributes_for(:user)
+post :create, email: 'joe@gmail.com', password: 'password'
+
+Routing
+get '/patients/:id', to: 'patients#show', as: 'patient'
+
+Error in routing are due to missing params or errors in the route definition
+no black magic eduardo
+
+Updating rails attributes
+validates
+belongs_to
+has_many
+@user.update_attribute(:admin, true)
+
+
+
+Serving images.
+Put images in the assets/images
+and the use the image_tag in rails 
+= image_tag('dog.png', :class => "img-responsive")
+image reponsive makes you image adapt to the display
+
+
+Testing emails
+it 'sends and email to a friend' do
+  post :create, invitation: {guest_name: 'Joe', guest_email: 'joe@example.com', invitation_message: 'Hey come and join me at Myflix'}
+  expect(ActionMailer::Base.deliveries.last.to).to eq(["joe@example.com"])
+end
+
+after do
+  ActionMailer::Base.deliveries.clear
+end
+We use this to clear up emails to be sure that other specs will not break
+
+had this problem
+No route matches {:action=>"dashboard", :controller=>"users"} 
+What it means is that I am not passing all the necesary arguments to complete the members route 
+get :dashboard is not enough and passing the id is required
+get :dashboard, id: joe.id
+
+
+Stripe
+An example of stripe payment form
+= bootstrap_form_for(@user) do |f|
+  %header
+    %h2 Sign up!
+  %fieldset
+    = f.email_field :email
+    = f.text_field :full_name
+    = f.password_field :password
+  %fieldset.credit_card
+    %span.payment-errors
+    .form-group
+      %label.control-label(for='credit-card-number') Credit Card Number
+      %input.form-control#credit-card-number(type="text" data-stripe = "number")
+    .form-group
+      %label.control-label(for='security-code') Security Code
+      %input.form-control#security-code(type="text" data-stripe = "cvc")
+    .form-group
+      %label.control-label Expiration
+      = select_month(Date.today, {add_month_numbers: true},  class: 'form-control', data: {stripe: "exp-month"})
+      %br
+      = select_year(Date.today.year, {start_year: Date.today.year, end_year: Date.today.year + 4}, class: 'form-control', data: {stripe: "exp-year"})
+  %fieldset.actions.control-group
+    .controls
+      %input(type="submit" value="Sign Up" class="btn btn-default")
+
+
+TODO
+Update article about the set up to include to bootstrap Tomas recomendation
+Update article about mailers to include how to test mailers
+Update article about testing to include important expectations
+Update stripe article to make a better introduction about the set up 
+Update hash value article to include that when hashes are initiliazed with a value j
+Update forgot password article with routes and make it more understandable.
+
+Article about recurrig billing on stripe
+
+Set up:
+
+Install the gem:
+```ruby
+gem 'stripe', :git => 'https://github.com/stripe/stripe-ruby'
+```
+```ruby
+#config/initializers/stripe.rb
+Rails.configuration.stripe = {
+  :secret_key      => ENV['stripe_secret_key']
+  :publishable_key => ENV['stripe_publishable_key'],
+}
+
+Stripe.api_key = Rails.configuration.stripe[:secret_key]
+```
+Add the stripe attributes to the rails forms
+From there are two ways: set up the payment widget
+
+Or the prefferred one to create a custom form
+
+```python
+#views/users/new
+= bootstrap_form_for(@user) do |f|
+  %header
+    %h2 Sign up!
+  %fieldset
+    = f.email_field :email
+    = f.text_field :full_name
+    = f.password_field :password
+  %fieldset.credit_card
+    %span.payment-errors
+    .form-group
+      %label.control-label(for='credit-card-number') Credit Card Number
+      %input.form-control#credit-card-number(type="text" data-stripe = "number")
+    .form-group
+      %label.control-label(for='security-code') Security Code
+      %input.form-control#security-code(type="text" data-stripe = "cvc")
+    .form-group
+      %label.control-label Expiration
+      = select_month(Date.today, {add_month_numbers: true},  class: 'form-control', data: {stripe: "exp-month"})
+      %br
+      = select_year(Date.today.year, {start_year: Date.today.year, end_year: Date.today.year + 4}, class: 'form-control', data: {stripe: "exp-year"})
+  %fieldset.actions.control-group
+    .controls
+      %input(type="submit" value="Sign Up" class="btn btn-default")
+```
+We need to set up the necessary java scrip for this
+
+```python
+#views/layouts/application.html.haml
+!!!
+%html
+  %head
+    %title Firecamp
+    = csrf_meta_tags
+    = stylesheet_link_tag    'application'
+    = javascript_include_tag 'application'
+    = yield :head 
+  %body
+    = yield
+
+#app/views/new.html.haml
+= content_for :head do 
+  %script{:src => "https://js.stripe.com/v2/", :type => "text/javascript"}
+  :javascript
+    Stripe.setPublishableKey("#{ENV['PUBLISHABLE_KEY']}");
+  = javascript_include_tag 'payment'
+```
+
+We create the payment.js file 
+
+```javascript
+#app/assets/javascript/payment.js
+jQuery(function($) {
+  $('#new_user').submit(function(event) {
+    var $form = $(this);
+
+    // Disable the submit button to prevent repeated clicks
+    $form.find('button').prop('disabled', true);
+
+    Stripe.card.createToken($form, stripeResponseHandler);
+
+    // Prevent the form from submitting with the default action
+    return false;
+  });
+});
+
+function stripeResponseHandler(status, response) {
+  var $form = $('#new_user');
+
+  if (response.error) {
+    // Show the errors on the form
+    $form.find('.payment-errors').text(response.error.message);
+    $form.find('button').prop('disabled', false);
+  } else {
+    // response contains id and card, which contains additional card details
+    var token = response.id;
+    // Insert the token into the form so it gets submitted to the server
+    $form.append($('<input type="hidden" name="stripeToken" />').val(token));
+    // and submit
+    $form.get(0).submit();
+  }
+};
+```
+
+if we get the following error of the sort ```Asset filtered out and will not be served:``` we just need to the following 
+
+Now becareful with this because if you do that your Js asset might get serve twice and in this case means that your form will be summited twice again.
+So make sure that when testing you check your log so that you notice that you are not serving the asset twice
+
+Now finally we can just paste a little stripe snippet into the user create action in order to test that our set up is working correctly.
+
+```ruby
+#app/controllers/users_controller.rb
+def create
+  @user = User.new(user_params)
+  if @user.save 
+    @amount = 777 
+
+    charge = Stripe::Charge.create(
+      :card  => params[:stripeToken],
+      :amount      => @amount,
+      :description => "Payment for #{@user.email}",
+      :currency    => 'usd'
+    )
+
+    AppMailer.welcome_notification(@user).deliver
+    flash[:success] = 'Welcome to Firecamp! Hope you enjoy the experience'
+    @user.update_attribute(:admin, true)
+    session[:user_id] = @user.id
+    redirect_to dashboard_user_path(@user)
+  else
+    render :new
+  end
+end
+```
+
+And if our set up is working fine we should be seeing that payment prosecced in our stripe dashboard.
+
+e have to be carefull 
+So far until now we've been hitting the wire all the time to test our wrapper but that is undesirable because
+
+Webmock and vcr integration when dealing with external APIs 
+Web mock and vrc are used to simulate a response from an external api library. 
+We use vrc to record response from external APIs and user stubs and when we want to keep testing at the corresponding level of concern
+
+
+We just have to install the gems:
+
+gem 'vcr'
+gem 'webmock'
+
+```ruby
+#spec/spec_helper.rb
+require 'vcr'
+
+VCR.configure do |c|
+  c.cassette_library_dir = 'spec/cassettes'
+  c.hook_into :webmock
+  c.configure_rspec_metadata!
+end
+
+RSpec.configure do |c|
+  c.treat_symbols_as_metadata_keys_with_true_values = true
+end
+```
+
+Now the first time the test will actully go to the wire and then it will store all the information in a cassette file under the spec/cassettes directory. After thisit will run the spec with the information stored here 
+
+When we finally go to the controller we can use stubs and mocks to test the controller. This will keep the testing interface clean and non repeatable and not polluted with noise that does not belong to the scope. We would have to test againg for different credit card number, cvc that is not relevant in this moment to the controller action since we have already tested the wrapper it self.
+
+As an example in if we want to use we would have to again reproduce the stripe API token generation and include different credit cards number something like this:
+
+```ruby
+describe 'Post create' do
+  let (:token) do
+  Stripe::Token.create(
+    :card => {
+      :number => card_number,
+      :exp_month => 3,
+      :exp_year => 2016,
+      :cvc => "314"
+    },
+  ).id
+  end
+
+  context 'with valid input and valid credit card info', :vcr do
+    let(:card_number) {4242424242424242}
+
+    before{post :create,
+           user: Fabricate.attributes_for(:user),
+           stripeToken: token} 
+
+    it 'redirects to the dashboard path page' do
+      expect(response).to redirect_to dashboard_user_path(User.first)
+    end
+  end
+end
+```
+Writting this again is unnesessary because we only need to know if the reponse was successful or not. More over this does not really belongs to the create action of the controller scope which real concern is to create or not a user and not really handling payment responses.
+
+We simplify our test to make them look like this:
+
+```ruby
+describe 'Post create' do
+  context 'with valid input and valid credit card info' do
+    before do
+      charge = double('charge')
+      charge.stub(:successful?).and_return(true)
+      StripeWrapper::Charge.stub(:create).and_return(charge)
+      post :create, 
+        user: Fabricate.attributes_for(:user),
+        stripeToken: '345'
+    end
+           
+    it 'redirects to the dashboard path page' do
+      expect(response).to redirect_to dashboard_user_path(User.first)
+    end
+
+    it 'creates a user' do
+      expect(User.count).to eq(1)
+    end
+  end
+end
+```
+
+```ruby
+def create
+  @user = User.new(user_params)
+  if @user.valid? 
+    charge = StripeWrapper::Charge.create(
+      amount: 777,
+      card: params[:stripeToken]
+    )
+    if charge.successful? 
+      @user.save
+      @user.update_attribute(:admin, true)
+      AppMailer.welcome_notification(@user).deliver
+      flash[:success] = 'Welcome to Firecamp! Hope you enjoy the experience'
+      session[:user_id] = @user.id
+      redirect_to dashboard_user_path(@user)
+    else
+      flash[:error] = charge.error_message?
+      render :new
+    end
+  else
+    render :new
+  end
+end
+```
+This code works as expected but we realized that there are many things that we have to take care about when we create a new user. We have to create a charge, update the admin attribute, send a mail, set the current user in the session, redirect etc. We could just delegate all this to a service object and let the controller to handle just the request response mechanism. Ideally we would want the create accion to have the follwing form:
+
+```ruby
+if sign_up.successful?
+  flash[:success] = "Some encouraging message"
+  redirect_to some_happy_path
+else
+  flash[:error] = "Some not nice message"
+  render :new
+end
+```
+
+Our user signup service object would look like this:
+
+```ruby
+#app/services/user_signup.rb
+class UserSignup
+  attr_reader :error_message
+
+  def initialize(user)
+    @user = user
+  end
+
+  def signup(stripe_token)
+    if @user.valid? 
+      charge = StripeWrapper::Charge.create(
+        amount: 777,
+        card: stripe_token
+      )
+      if charge.successful? 
+        @status = :success
+        @user.save
+        @user.update_attribute(:admin, true)
+        AppMailer.welcome_notification(@user).deliver
+        self
+      else
+        @status = :failed
+        @error_message = charge.error_message
+        self
+      end
+    else
+      @status = :failed
+      @error_message = "Your user information is not valid. Please check the errors below"
+      self
+    end
+  end
+
+  def successful?
+    @status == :success
+  end
+end
+#note that for every possible outcome note that we need to return the instance object itself because we are going to call methods of it later on in the controller. 
+
+#app/controllers/users_controller.rb
+def create
+  @user = User.new(user_params)
+  user_signup = UserSignup.new(@user).signup(params[:stripeToken])
+
+  if user_signup.successful?
+    flash[:success] = 'Welcome to Firecamp! Hope you enjoy the experience'
+    session[:user_id] = @user.id
+    redirect_to dashboard_user_path(@user)
+  else
+    flash[:error] = user_signup.error_message
+    render :new
+  end
+end
+```
+
+The test suite should pass because the stubs still will be valid even if the call to the wrapper is in the new service object. We just have to get used to the new extra layer that we added on top.
+
+We can simplify the controller spects to only test for redirects and flash messages. Also if we did not need to use the @user to redirect to the right path then we could just simple stub the usersignup service objects responses but since we need the creationg the user we need to to through the user_signup, and in this case we just need to again stub the stripewrapper when it goes to the wire
+
+```ruby
+describe 'Post create' do
+  context 'with valid user signup' do
+    before do
+      #If we did not need the @user to be created we could have just 
+      #stub the methods in the user sign up 
+      charge = double('charge', successful?: true)
+      StripeWrapper::Charge.stub(:create).and_return(charge)
+      post :create, 
+        user: Fabricate.attributes_for(:user),
+        stripeToken: '345'
+    end
+
+    it 'redirects to the dashboard path page' do
+      expect(response).to redirect_to dashboard_user_path(User.first)
+    end
+  end
+end
+```
+
+Adding subscribtions:
+Subscriptions are managed in the stripe wrapper and they are done by creating a stripe costumer object that will cotain the user information (including the card token) and the type of plan that the user is signin for.
+
+Creating a plan:
+Create plan using stripes APi 
+Creating we do not need to create a charge anymore when creating a plan charges and everything will be manage by stripe directly 
+
+Plans can be set directly in through the stripe api or using their web interphase. Each plan will have a referal number that we are going to associtate with the user when we create a customer
+
+CHARGES:
+They are use for a one time payment and they require:
+Card token :card
+Amount to charge :amount
+currency :currency
+Description is optional but recommended :description
+
+
+module StipeWrapper 
+
+class Charge
+  attr_reader :status, :response
+
+  def initialize(response, status)
+    @response = response
+    @status = status
+  end
+
+  def self.charge
+    begin
+      response = Stripe::Charge.create(
+        card: token,
+        amount: 444,
+        current: 'usd'
+        description: "Payment for #{user.email}"
+      )
+      new(reponse, :success)
+    rescue Stripe::CardError => e
+      new(e, :failed)
+    end
+  end
+
+  def successfull
+    status == :success
+  end
+
+  def error_method
+    response.message
+  end
+end
+
+RECURRING BILLING
+They use plans and users are stored as customer and then charged they required:
+Card token, :card 
+Plan :plan
+User email (or some metadata to be able to identify the customer later on) :email
+
+the plan should problably be set somewhere in the back end .
+
+
+def self.create(options = {})
+  begin
+    response =  Stripe::Customer.create(
+      card: params[:stripeToken],
+      plan: 'regular'
+      email: 'email'
+    )
+    new(response, status)
+  rescue Stripe::CardError => e
+    new(e, status)
+  end
+end
+
+Testing stripe with capybara:
+
+Stripe::InvalidRequestError:
+       This customer has no attached payment source
+If we run the spec as it is we will get this error, because stripe uses javascript to extract the data from the form. So we need to enable javascript to 
+All we need to do is to add , :js => true
+
+expected 0 got 1 user
+, now the Selenium driver gives problem with transactional database rollbacks so we need to use another method to clean up the database. For that we need to add the database_cleaner gem to the gemfile and add the following bit of configuration: 
+
+
+```ruby
+config.before(:suite) do
+    DatabaseCleaner.clean_with(:truncation)
+  end
+
+  config.before(:each) do
+    DatabaseCleaner.strategy = :truncation
+  end
+
+  config.before(:each, :js => true) do
+    DatabaseCleaner.strategy = :truncation
+  end
+
+  config.before(:each) do
+    DatabaseCleaner.start
+  end
+
+  config.after(:each) do
+    DatabaseCleaner.clean
+  end
+```
+
+We also need to set the 
+config.use_transactional_fixtures = false
+
+
+VCR::Errors::UnhandledHTTPRequestError:
+We also need to add this bit of configuration to the spec helper
+to the VCR configuaration
+c.ignore_localhost = true
+
+StaleElementReference Error Element not found in the cache
+We fix just by adding searching another word
+
+Failure/Error: post1 = Fabricate(:post)
+     ActiveRecord::UnknownAttributeError:
+            unknown attribute: user
+            )
+When there is an error like this only on the test enviroment, probably becasue the migration did not update on the test enviroment
+db:migrate RAILS_ENV=test
+rake db:migrate
+rake db:test:prepare 
+
+ActiveRecord_Associations_CollectionProxy:0xdf10484
+This is the type of object returned when we use post.comments and is not an array if we want to convert it to an array .to_a 
+
+Eliminating unwanted unvalid objects
+@groups = current_user.groups.to_a.delete_if(&:new_record?)
+
+
+Unreasonable routing error in test
+No route matches {:action=>"index", :controller=>"posts"}
+Not passing the correct parameters usually missing a param
+
+ActiveRecord::AssociationTypeMismatch:
+       Group(#83785700) expected, got String(#67630490)
+Customers nor payments are not activerecord objects so we need to display them
+
+forgot password
+
+forgot password
+- /
+
+Userful one-liners
+@post = @group.posts.build(post_params.merge!(user: current_user))
+
+This is an example of what I am talking about
+
+For the user signup SERVICE object we can't use the post
+
+git workflow:
+
+Working on my machine by mysefl:
+Try this:
+create feature branch 
+push brach to the github
+merge branch on git hub
+switch locally to master on my machine
+pull changes
+
+When working with others?
+
+
+FORGOT PASSWORD:
+resources :forgot_passwords, only: [:create]
+get 'forgot_password', to: 'forgot_passwords#new'
+get 'forgot_password_confirmation', to: 'forgot_passwords#confirm'
+
+resources :password_resets, only: [:show, :create]
+get 'expired_token', to: 'password_resets#expired_token'
+
+params for a many to many assotiations
+"post"=>{"title"=>"fafasf", "url"=>"fsafasf", "description"=>"fasfasfas", "category_ids"=>["1", "2", "3", ""]}
+
+for M:M there is some querky naming convention Revise that
+ok The naming convention is such that
+models: post, category, post_category
+tables: posts, categories, posts_categories
+
+Confirmation validation is really easy check validation guides
+
+The key to this whole workflow is that we are going to use the random user token to find the user instead of the id as we normally would. We do this because we do nto expose sensible information to the public and also because tokens and disposable we can just discard it and create a new one which is convinient for security. We can't do the same with id obviously. 
+
+for testing that it redirect :back
+request.env["HTTP_REFERER"] = "http://fake.host"
+expect(response).to redirect_to "http://fake.host"
+
+////////////////////////////////
+Starting a new project from template
+Cloning the template
+bundle
+rails g rename:app_to name_of_app
+change database names
+rake db:create db:migrate
+create a new repo with respective name
+vim .vim/config and change remore url to the new repo 
+git push -u origin master
+figaro install
+set the stripe keys:
+stripe_secret_key
+stripe_publishable_key
+
+////////////////////// CART
+What is a cart:
+A cart is just a list of products that are persited during the user session.
+The cart_info must be available at all times while the user is on the app. Store its id on the session
+
+We could create a cart and start adding products.
+That is not flexible enough because it does not allow the introduction of number of items 
+We need create a new class: cart_item, that includes unit price as the product price and number of times and total 
+Problem is that that approach does not allow to add 
+
+///////Stripe webhook
+We can check the webhook using request bin and adding a webhook on my stripe dashboard
+Install the stripe-event gem
+mount Stripe event engine at the config/routes.rb with thise we set the url to which the webhook will be directed in our application
+We add the the suggested code in our stripe.rb file
+```ruby
+StripeEvent.configure do |events|
+  events.subscribe 'charge.succeeded' do |event|
+    event.data.object #=> #<Stripe::Charge:0x3fcb34c115f8>
+  end
+end
+```
+
+We need to create a payment model and table
+t.integer :user_id
+t.integer :amount
+t.string :reference_id
+
+////////////////Flash messages/////
+```ruby
+#application_helper.rb
+module ApplicationHelper
+  def bootstrap_class_for(flash_type)
+    case flash_type
+      when "success"
+        "success"   # Green
+      when "error"
+        "danger"    # Red
+      when "alert"
+        "warning"   # Yellow
+      when "notice"
+        "info"      # Blue
+      else
+        flash_type.to_s
+    end
+  end
+end
+
+#views/shared/_flash.html.haml
+module ApplicationHelper
+  def bootstrap_class_for(flash_type)
+    case flash_type
+      when "success"
+        "success"   # Green
+      when "error"
+        "danger"    # Red
+      when "alert"
+        "warning"   # Yellow
+      when "notice"
+        "info"      # Blue
+      else
+        flash_type.to_s
+    end
+  end
+end
+
+views/layouts/application.html.haml
+%html
+  %head
+    %title Firecamp
+    = csrf_meta_tags
+    = stylesheet_link_tag    'application'
+    = javascript_include_tag 'application'
+    %link{:href => "//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css", :rel => "stylesheet"}/
+    = yield :head 
+  %body
+    =  render 'shared/navbar'
+    =  render 'shared/flash'
+    = yield
+```
+
+Install the carrierwave-aws gem
+```ruby
+CarrierWave.configure do |config|
+  config.storage    = :aws
+  config.aws_bucket = ENV.fetch('BUCKET')
+  config.aws_acl    = :public_read
+  config.aws_authenticated_url_expiration = 60 * 60 * 24 * 365
+
+  config.aws_credentials = {
+    access_key_id:     ENV.fetch('AWSKEYID'),
+    secret_access_key: ENV.fetch('AWSKEYACCESS')
+  }
+end
+```
+SErving assests
+Hey Brandon,
+Thanks I solved the issue by adding:
+
+#production.rb
+config.assets.compile = true
+config.assets.precompile =  ['*.js', '*.css', '*.css.erb'] 
+
+and running rake assets:precompile
+I saw that you do not recommend precompiling the assets locally, why is that? Should we use Capistrano to automate this, is that what the link suggests?
