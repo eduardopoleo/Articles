@@ -1,21 +1,28 @@
 <h3 style='padding-top:15px;'><i>70-83 About symbols</i></h3>
-Why ruby has symbols? There is probably a good number of reasons but [this](http://rubylearning.com/satishtalim/ruby_symbols.html "symbols") article is a good start. Symbols belong to the class ```Symbol``` they are different than strings. But they can also be compared. Contrary to strings symbols with equal value are infact the same object.  
+Why does ruby have symbols? There is probably a good number of reasons but [this](http://rubylearning.com/satishtalim/ruby_symbols.html "symbols") article is a good start. Symbols belong to the class ```Symbol``` they are different than strings. But they can also be compared. Contrary to strings symbols with equal value are infact the same object.  
 
 ```ruby
-2.1.0 :003 > a.object_id
- => 273368 
-2.1.0 :004 > b.object_id
- => 273368 
-2.1.0 :005 > c = :another_symbol
- => :another_symbol 
-2.1.0 :006 > c.object_id
- => 273448 
-2.1.0 :007 >
+2.1.4 :001 > a = :a_symbol
+ => :a_symbol 
+2.1.4 :002 > b = :a_symbol
+ => :a_symbol 
+2.1.4 :003 > a.object_id
+ => 273128 
+2.1.4 :004 > b.object_id
+ => 273128 
+2.1.4 :005 > c = "a_string"
+ => "a_string" 
+2.1.4 :006 > d = "a_string"
+ => "a_string" 
+2.1.4 :007 > c.object_id
+ => 81302720 
+2.1.4 :008 > d.object_id
+ => 81294410
 ```
-Thus, one can see symbols as the name of an internal id which makes them problably the simplest type of object in ruby. All the names (instance varibles, methos. classes, etc) are stored as symbols and these symbols are stored in the symbol table. In the ```test_method_names_become_symbols``` we have to transform the symbols to string because this comparison ```:something == "something"``` will always return false. On the other, hand doing this ```:a_symbol == :a_symbol``` carries little meaning because you are basically comparing the symbol against it self since they are always unique. 
+Thus, one can see symbols as the name of an internal id which makes them probably the simplest type of object in ruby. All the names (instance variables, methods, classes, etc.) are stored as symbols and these symbols are stored in the symbol table.
+In the ```test_method_names_become_symbols``` exercise we have to transform the symbols to string because this comparison ```:something == "something"``` will always return false. On the other, hand doing this ```:a_symbol == :a_symbol``` carries little meaning because you are basically comparing the symbol against itself since they are always unique. 
 
-
-Symbols can be transform into strings and viceversa. One can interpolate strings when declaring a symbol, also when interpolating a symbol inside a string the ```.to_s``` method gets called.
+Symbols can be transform into strings and vice versa. One can interpolate strings when declaring a symbol, also when interpolating a symbol inside a string the ```.to_s``` method gets called.
 
 ```ruby
 
@@ -30,7 +37,7 @@ string = "It is raining #{symbol} and dogs."
 string  
 #=> "It is raining cats and dogs."
 ```
-Symbols are only created once and can not be modified this makes them very efficient and useful when we care more about the identity instead of the value ( e.g hash key). But they are only remove from memore when the program exist so having many of them it can be very taxing, as explained [here](http://stackoverflow.com/questions/4573991/why-is-it-not-a-good-idea-to-dynamically-create-a-lot-of-symbols-in-ruby "symbol and memory") here.
+Symbols are only created once and can not be modified this makes them very efficient and useful when we care more about the identity instead of the value ( e.g hash key). But they are only removed from memory when the program exist so having many of them can be very taxing, as explained [here](http://stackoverflow.com/questions/4573991/why-is-it-not-a-good-idea-to-dynamically-create-a-lot-of-symbols-in-ruby "symbol and memory").
 
 <h3 style='padding-top:15px;'><i>84-110 About Regular Expressions</i></h3>
 Regular expression have a class of their own ```Regexp```. We can test if a pattern is present on a string by using the following syntax:
@@ -39,7 +46,7 @@ Regular expression have a class of their own ```Regexp```. We can test if a patt
 "aaaa"[/aa/]
 #=> "aa"
 ```
-The following metacharacters are called [quantifiers](http://ruby-doc.org/core-1.9.3/Regexp.html#class-Regexp-label-Repetition "quantifier"):
+The following meta-characters are called [quantifiers](http://ruby-doc.org/core-1.9.3/Regexp.html#class-Regexp-label-Repetition "quantifier"):
 
 <ul>
   <li>```?``` matches zero or one of the pattern</li>
@@ -47,7 +54,7 @@ The following metacharacters are called [quantifiers](http://ruby-doc.org/core-1
   <li>```*``` matches zero or more of the pattern</li>
 </ul>
 
-Quantifiers target the character or expression that is directly to the left of them, they do not necesarily target the whole expression preciding them.
+Quantifiers target the character or expression that is directly to the left of them, they do not necessarily target the whole expression preceding them.
 
 ```ruby
 "abbcccddddeeeee"[/az?/]
@@ -60,33 +67,33 @@ Quantifiers target the character or expression that is directly to the left of t
 "abbcccddddeeeee"[/z*/]
 # This will match zero or more "z". In this case there is none so the return value is ""
 ```
-From that last case we can conclude that the ```*``` quantifier will never fail as it will always targe at least zero occurences of whatever it's preceding it. This quatifiers ```*``` and ```+``` are greedy in the sense that they will try to match as many charecters as they can. Interestingly the left most match will wins
+From that last case we can conclude that the ```*``` quantifier will never fail as it will always target at least zero occurrences of whatever it's preceding it. This quantifiers ```*``` and ```+``` are greedy in the sense that they will try to match as many characters as they can. Interestingly the left most match will wins
 
 ```ruby
 "abbccc az"[/az*/]
 #=> "a"
-Since the * matches zero or more "a" complies.
 ```
+Since the * matches zero or more "a" complies.
 The ```[]``` matches one of the options contained within. ```\s``` matches all the white spaces including regular white spaces ```" "```, tabs ``` \t```, and returns ```\n```. 
 
-There are anchors that we can use to match the end of beginning of a string.
+There are anchors that we can use to match occurrences at the beginning or the end of a string.
 
 ```ruby
 "start end"[/\Astart/]
 #=> "start"
-# This will match all the "start" the they are at the beginning of a string.
+# This will match all the "start" occurrences that are at the beginning of the string.
 #In this case matches "start"
 "start end"[/\Aend/]
 #=> nil
-#This pattern matches all the "end" that are at the beginning of the string.
-#Since there are not end at the beginning of the string then it will return nil.
+#This pattern matches all the "end" occurrences that are at the beginning of the string.
+#Since there is none it returns zero.
 #Similarly:
 assert_equal "end", "start end"[/end\z/]
 #=> "end"
 assert_equal nil, "start end"[/start\z/]
 #=> nil
 ```
-There are also anchors that are used to match the beginning and end of a line.
+There are also anchors that allow us to match patterns at the beginning or the end of a line.
 
 ```ruby
 "num 42\n2 lines"[/^\d+/]
@@ -95,7 +102,7 @@ There are also anchors that are used to match the beginning and end of a line.
 #=> "42"
 ```
 
-And finally there is the word boundary command ```\b``` that can be used to match the beginning or the end of a word.
+And finally there is the word boundary command ```\b``` that can be used to match occurrences at the beginning or at the end of a word.
 
 ```ruby
 "bovine vines"[/\bvine./]
@@ -109,7 +116,7 @@ Parenthesis provide grouping just like they would do for a math operation:
 "ahahaha"[/(ha)+/]
 #=> "hahaha"
 ```
-The matches can also be extracted by using the global variables ```$```. these variables are assigned everytime a regex containing ```()``` is [matched](http://stackoverflow.com/questions/12945779/ruby-koans-regex-parentheses-capture-matched-content "Regex groups"). The amount of tests varibles created will be equal to the number of () group in the regex. For example:
+The matches can also be extracted by using the global variables ```$```. these variables are assigned every time a regex containing ```()``` is [matched](http://stackoverflow.com/questions/12945779/ruby-koans-regex-parentheses-capture-matched-content "Regex groups"). The amount of these variables created will be equal to the number of () group in the regex. For example:
 
 ```ruby
 "ahahaha"[/(ha)+/]
@@ -120,7 +127,7 @@ $2
 #=> nil
 ```
 
-```(ha)+``` matches the 3 x "ha" but since there is only one group defined only one varibles is going to be assigned  ```$1 = "ha"```. 
+```(ha)+``` matches the 3 x "ha" but since there is only one () group defined only one 'ha' is going to be assigned, therefore  ```$1 = "ha"```. 
 
 Lastly there are these three methods that are very useful: 
 

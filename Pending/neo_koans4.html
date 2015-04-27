@@ -1,10 +1,9 @@
 <h3 style='padding-top:15px;'><i>110-124 About Methods</i></h3>
 
-Methods usually can be used without parenthesis but when we are using other methods as inputs it might be confussing.
+Methods can usually be used without parenthesis but when we are using other methods as inputs it might be confusing.
 When we pass and argument that is not acceptable is an ArgumentError.
-```assert_raise()```  capture the error class and 
 
-We can pass default values to the methods argumets as seen below:
+We can pass default values to the methods arguments as seen below:
 
 ```ruby
 def method_with_defaults(a, b=:default_value)
@@ -15,7 +14,7 @@ method_with_defaults(1)
 #=> [1, :default_value]
 ```
 
-We can also pass in ```*args``` which means that the method is going to expect an array. We can call method in the same class even if they require specific revievers. A method with an specific reciver would be a method that is call upon an object such as ```34.to_s```. Private methods can also be called inside classes but they can't be have specific recievers. How does this translate in rails? 
+We can also pass in ```*args``` which means that the method is going to expect an array. We can call the method inside other methods within the same class. A method with an specific receiver would be a method that is call upon an object such as ```34.to_s```. Private methods can also be called inside classes but they can't be have specific receivers. How does this translate in rails? 
 
 <h3 style='padding-top:15px;'><i>125</i> About Keyword Arguments</h3>
 We set default default values using hashes as seen in the example.
@@ -27,7 +26,7 @@ end
 
 <h3 style='padding-top:15px;'><i>126- About Constants</i></h3>
 
-Top level constants can be called using ```::```. Nested classes inherit constants from enclosing clases. Subclasses also enherit constants. Altough nested class constant beats inherited.
+Top level constants can be called using ```::```. Nested classes inherit constants from enclosing classes. Subclasses also inherit constants. Although nested class constant beats inherited.
 
 ```ruby
 class Animal
