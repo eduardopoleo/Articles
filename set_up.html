@@ -3,14 +3,14 @@
 <p>I am going to skip the user/role creation for postgresql. I am still not very sure what the steps for a proper set up are, although <a href="http://stackoverflow.com/questions/9987171/rails-3-2-fatal-peer-authentication-failed-for-user-pgerror">this</a> stackoverflow question it's been helpful for me in the past.</p>
 
 <p>Anyhow once the user creation is out of the way we can proceed to create our new app: </p>
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>rails new myapp --database=postgresql</code>
-</pre>
+```python
+rails new myapp --database=postgresql
+```
 
 <p>Then we can configure the data base by modifying the <code>database.yml</code> file.</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>development:
+```ruby
+development:
   adapter: postgresql
   encoding: unicode
   database: myapp_development
@@ -24,25 +24,25 @@ test:
   database: myapp_test
   pool: 5
   username: myapp
-  password: password1</code>
-</pre>
+  password: password1
+```
 
 <p>We can then create the databases:</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>rake db:create db:migrate</code>
-</pre>
+```python
+rake db:create db:migrate
+```
 
 <p>At this point we should run the server to verify that everything is working fine:</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>rails s</code>
-</pre>
+```ruby
+rails s
+```
 
 <p>Now we can proceed to set up the right gems. For a project that includes testing this is a good set up</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>#gemfile.rb
+```ruby
+#gemfile.rb
 source 'https://rubygems.org'
 ruby '2.1.1'
 
@@ -59,6 +59,7 @@ gem 'bootstrap_form'
 gem 'fabrication'
 gem 'faker'
 gem 'turbolinks'
+#gem 'rename' if you want to create a blank slate for all your projects
 
 group :development do
   gem 'thin'
@@ -81,44 +82,54 @@ end
 
 group :production do
   gem 'rails_12factor'
-end</code>
-</pre>
+end
+```
 
 <p>After which we should run <code>bundle update</code>.</p>
 <p>We can now set up the bootstrap. We start by changing the application.css file to include the scss extension.</p>
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>application.css.scss</code>
-</pre>
+
+```python
+application.css.scss
+```
+
 
 <p>Now we import the Bootstrap styles by adding this to the application.css.scss file</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>@import "bootstrap-sprockets";
-@import "bootstrap";</code>
-</pre>
+Edit: This configuration is not the one recommended but it allows me to place my code in multiple stylesheets
+
+```ruby
+ *= require_tree .
+ *= require_self
+ *= require rails_bootstrap_forms
+ */
+
+@import "bootstrap-sprockets";
+@import "bootstrap";
+```
 
 <p>it is important to REMOVE all the <code>//= require</code> from the file, as specified in the bootstrap saas <a href="https://github.com/twbs/bootstrap-sass">documentation</a>.</p>
 
 <p>Then we should require Bootstrap Javascript.</p>
 
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>#application.js
+```ruby
+#application.js
 //= require jquery
 //= require jquery_ujs
 //= require turbolinks
 //= require bootstrap-sprockets
-//= require_tree .</code>
-</pre>
+//= require_tree .
+```
 
 <p>In order to verify that everything is working properly we can just set a route to something like this:</p>
-<pre style='margin-top:15px; margin-bottom:15px;'>
-<code>root 'welcome#index'</code>
-</pre>
+
+```ruby
+root 'welcome#index'
+```
 
  <p>And after creating the corresponding <code>welcome_controller.rb</code> we can paste the following code on the index.html.haml just to check that everything is in place </p>
 
- <pre style='margin-top:15px; margin-bottom:15px;'>
- <code>%nav.navbar.navbar-inverse.navbar-fixed-top{:role => "navigation"}
+```python
+%nav.navbar.navbar-inverse.navbar-fixed-top{:role => "navigation"}
   .container
     .navbar-header
       %button.navbar-toggle{"data-target" => "#bs-example-navbar-collapse-1", "data-toggle" => "collapse", :type => "button"}
@@ -134,7 +145,32 @@ end</code>
         %li
           %a{:href => "#"} Services
         %li
-          %a{:href => "#"} Contact</code>
- </pre>
+          %a{:href => "#"} Contact
+```
 
- <p>And if that works we are ready to go!</p>
+Edit: I am editing this article to also include Rspec configuration
+
+Since the rspec gem is already configured we can just run the following in out terminal window:
+
+```ruby
+rails g rspec:install
+```
+
+That's all we need to start writing specs. Now if we also want to set up capybara we need to add:
+
+```ruby
+#spec_helper
+require 'capybara/rails'
+```
+
+We could create a blank_template repo in github to avoid doing this from scratch every time. Next time you need to start a new project all you have to do is:
+
+<ul>
+  <li>Clone your repo into your directory</li>
+  <li>bundle install</li>
+  <li>rename your app if you wish <code>rails g rename:app_to new_app_name</code></li>
+  <li>change the data base names accordingly</li>
+  <li>run <code>rake db:create db:migrate</code></li>
+</ul>
+
+<p>And that's it we are ready to go</p>
