@@ -1,0 +1,366 @@
+React first impression
+
+How to get started!
+
+I look through different blog posts and sites but nothing beats the official documentation. My recomendation is to follow these steps:
+
+<ul>
+  <li>Clone their tutorial Repo from github </li>
+  <li>Go to public/scripts/example.js  and erase all the code </li>
+  <li>Go through the official getting started turorial and the Thinking in React tutorial. </li>
+</ul>
+
+The tutorial repo already have a server set up that we can use to simulate the retrieval and posting of information to servers as we would do in real applications.
+The first tutorial will give you and idea of the syntax and will give you and overview of a react application while the second one will go 
+
+The first thing we want to do is to identify elements and stablish a hierarchy among them. We can slice our application into the following different components:
+![some text](/react_diagram.png "A title")
+<ul>
+  <li>
+    TodoBox
+    <ul>
+      <li> TableTitle </li>
+      <li> TodoTable </li>
+        <ul>
+          <li>TodoRow</li>
+        </ul>
+      <li> TodoForm </li>
+    </ul>
+  </li>
+</ul>
+
+Each of the items shown above will correspond to a specific react component.  We can start by defining our 'wrapper' TodoBox component which will contain all the others components. 
+
+```python
+var TodoBox = React.createClass({
+  render: function() {
+    return (
+      //Some html-like tags
+      <div className='todo-box'>  </div>
+    );
+  }
+});
+```
+
+As specified in the official documentation, all react components must possess a render function where we usually define the html contantent that is to be rendered in the browser. React already provide out of the box html-like components that we can use to render most of the commont html tags, such as divs. It is important to note that we can conviniently write html-like tags thanks to the syntactic sugar provided by [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html "jsx"	), otherwise we would have good old boring javascript :-):
+
+```python
+ var TodoBox = React.createClass({
+  render: function() {
+    return (
+      React.createElement('div', {className: "todo-box"},
+        "I am very simple component (for now)"
+      )
+    );
+  }
+}); 
+```
+We also need to tell react where in our application we want our nice TodoBox component to be rendered, for that we use the <code>React.render</code> method:  
+
+```python
+React.render(<TodoBox todos={TODOS} />, document.getElementById('content') )
+```
+The first parameter corresponds to the component to be rendered and the second its container which in this case is a div with id 'content'. This code should now output the following html:  
+
+```html
+<div>
+  <div class='todo-box'>
+    I am a very simple component
+  </div>
+</div>
+```
+
+<h3 style='padding-top:15px;'><i>Nested Components and props</i></h3>
+Now that we are conforatable writing components we can write a static representation of our system. This basically involves writting out all our components and its corresponding render functions, as shown below:
+
+```python
+ var TodoBox = React.createClass({
+  render: function() {
+    return (
+      <div className='todo-box'>
+        <TableTitle />
+        <TodoTable todos= {this.props.todos} />
+        <TodoForm/>
+      </div>
+    );
+  }
+});  
+
+var TableTitle = React.createClass({
+  render: function() {
+    return (
+      <h2> My Todo list </h2>
+    );
+  }
+});  
+
+var TodoTable = React.createClass({
+  render: function() {
+    var todos = [];
+    this.props.todos.forEach(function(todo){
+      todos.push(<TodoRow content={todo.content} deadline={todo.deadline} />)  
+    });
+    return (
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Action</th> 
+            <th>Deadline</th>
+          </tr>
+        </thead>
+        <tbody>
+          {todos}
+        </tbody>
+      </table> 
+    );
+  }
+});  
+
+var TodoRow = React.createClass({
+  render: function() {
+    return (
+      <tr>
+        <td><input type='checkbox'/></td>
+        <td>{this.props.content}</td>
+        <td>{this.props.deadline}</td>
+      </tr>
+    );
+  }
+});  
+
+var TodoForm = React.createClass({
+  render: function() {
+    return (
+      <form>
+        <input type='text' placeholder='Your Todo' />
+        <input type='text' placeholder='Deadline' />
+        <input type='submit' />
+      </form>
+    );
+  }
+});  
+
+var TODOS = [
+  {
+    content: 'First todo',
+    deadline: '2/07/2015'
+  },
+  {
+    content: 'Second todo',
+    deadline: '2/07/2015'
+  }
+]
+
+React.render(<TodoBox todos={TODOS} />, document.getElementById('content') )
+```
+There are a few things to note from this code. Note how we can nest our own custom components inside each other
+
+<h3 style='padding-top:15px;'><i>States</i></h3>
+
+We want to be able to change the color of the row depending of whether or not the the checkbox has been checked! So we can intuitive that the State of the row itself will be linked to the changes produced on the checkbox
+
+```python
+var TodoRow = React.createClass({
+  handleChange: function(){
+    var checkbox = this.refs.statusCheckBox.getDOMNode().checked
+    if (checkbox) {
+      var rowStyle = {
+        backgroundColor: 'green'
+      };
+    }else{
+      var rowStyle = {
+        backgroundColor: 'white'
+      };
+    };
+  },
+  render: function() {
+    return (
+      <tr style={rowStyle}>
+        <td>
+          <input
+           type='checkbox'
+           ref='statusCheckBox'
+           onChange={this.handleChange}
+          />
+        </td>
+        <td>{this.props.content}</td>
+        <td>{this.props.deadline}</td>
+      </tr>
+    );
+  }
+});
+```
+
+Changing states
+State of the row changes when we click the checkbox
+The state is passed in from the parent as the props.
+```python
+var TodoRow = React.createClass({
+  getInitialState: function(){
+    return{
+      rowStyle: {backgroundColor: 'white'}
+    };
+  },
+
+  handleChange: function(){
+    var checkbox = this.refs.statusCheckBox.getDOMNode().checked
+    if (checkbox){
+      this.setState({
+        rowStyle: {backgroundColor: 'green'}
+      });
+    }else{
+      this.setState({
+        rowStyle: {backgroundColor: 'white'}
+      });
+    }
+  },
+  render: function() {
+    return (
+      <tr style={this.state.rowStyle}>
+        <td>
+          <input
+           type='checkbox'
+           ref='statusCheckBox'
+           onChange={this.handleChange}
+          />
+        </td>
+        <td>{this.props.content}</td>
+        <td>{this.props.deadline}</td>
+      </tr>
+    );
+  }
+});
+```
+
+Retrieving data from the server 
+
+The first thing we have to do is to pass the location of our .json file where we are going to store our todos to the React render method
+
+```python
+React.render(<TodoBox url="todos.json" pollInterval={2000} />, document.getElementById('content') )
+```
+We intuitively know that this data is going to CHANGE over time so we know that the data is going to be an state of a component in our little todo system. Contrary to our previous example in this case is not that obvious whether the data belongs as a state of the todosBox or the todosTable but the nice people of facebook have ...
+
+We need to initialize the state of the component
+```python
+getInitialState: function(){
+    return{
+      data: []  
+    };
+  },
+```
+
+Now we make the ajax call to bring up the data from the server and if the request is successful it will update the state of the component
+
+```python
+componentDidMount: function(){
+    $.ajax({
+      url: this.props.url,
+      dataType: 'json',
+      chache: false,
+      success: function(data){
+        this.setState({data: data}); 
+      }.bind(this),
+      error: function(xhr, status, err){
+        console.error(this.props.url, status, err.toString());
+      }.bind(this)
+    });
+  },
+```
+React documentation suggest placing ajax calls on componnentDidMount, 
+It has todo with react life cycle 
+
+Now that we have fetch the data that contains all the todos we can pass it to the TodoTable component:
+
+```python
+render: function() {
+    return (
+      <div className='todo-box'>
+        <TableTitle />
+        <TodoTable todos = {this.state.data} />
+        <TodoForm/>
+      </div>
+    );
+  }
+```
+The todostable components do not need any change becuase it will work with the data passed in regardless where it came from.
+
+Posting data to the server
+
+It makes sense to do the ajax request 
+
+So far the flow of information in our application has been unidirectional, coming from the outer components to the smaller ones
+Implementing a form is a nice way to learn how post data to the server and how to make information flow from the children elements to their parents
+
+We first modify the form render method
+
+```python
+render: function() {
+    return (
+      <form className="commentForm" onSubmit={this.handleSubmit}>
+        <input type="text" placeholder="Your name" ref="author" />
+        <input type="text" placeholder="Say something..." ref="text" />
+        <input type="submit" value="Post" />
+      </form>
+    );
+  }
+```
+
+Now we need to create the handleSubmit function to handle the information to be posted by the form
+
+```python
+handleSubmit: function(e){
+    e.preventDefault();
+    var content = React.findDOMNode(this.refs.todoContent).value.trim() 
+    var deadline = React.findDOMNode(this.refs.todoDeadline).value.trim() 
+
+    if (!content || !deadline){
+      return;
+    }
+    
+    this.props.onTodoSubmit({content: content, deadline: deadline});
+    React.findDOMNode(this.refs.todoContent).value = "";
+    React.findDOMNode(this.refs.todoDeadline).value = "";
+  },
+```
+
+onTodosubmit is a property defined on the parent component of table which in this case is box but contrary to previous cases this props is use to pass info from children to parent! content and deadline are transfered to the box where they will posted to the server by another ajax called.
+
+First we need to defined the property on the box 
+```python
+render: function() {
+    return (
+      <div className="commentBox">
+        <h1>Comments</h1>
+        <CommentList data={this.state.data} />
+        <CommentForm onTodoSubmit={this.handleTodoSubmit} />
+      </div>
+    );
+```
+
+Now we can define the handleTodoSubmit() method that will post the todo to the server through the ajax call 
+
+```python
+handleTodoSubmit: function(todo){
+    $.ajax({
+      url: this.props.url,
+      dataType: 'json',
+      type: 'POST',
+      data: todo,
+      success: function(data) {
+        this.setState({data: data});
+      }.bind(this),
+      error: function(xhr, status, err) {
+        console.error(this.props.url, status, err.toString());
+      }.bind(this)
+    });
+  }
+```
+
+and that's it
+
+
+
+
+

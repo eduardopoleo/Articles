@@ -1,0 +1,296 @@
+<h3 style='padding-top:15px;'><i>Blocks in general</i></h3>
+Blocks are chunks of code that we use to apply procedures over objects or collections of objects. In ruby, methods can take blocks as arguments, and one of the most common examples is: 
+
+```ruby
+array = [1,2,3]
+
+# We are are passing the block to the each method
+array.each do |number|
+  puts number + 1
+end
+
+#=>2
+#=>3
+#=>4
+```
+We can make our own implementation of the ```each``` method in order to understand what's happening. 
+
+```ruby
+class Array
+  #Syntax 1, yield
+  def my_each
+  #We loop through each element in self which in this case corresponds to an instance of Array.
+   for i in self
+      #The yield statement literally yields the execution to the block and then pass the current element i to it. 
+      yield i 
+    end
+  end
+
+  #Syntax 2, block.call (both syntax are equivalent) 
+  def my_each2(&block)
+    for i in self
+      block.call i
+    end
+  end
+end
+
+strings = ["a", "ab", "abc"]
+
+#the variable in between the pipes (|string|) will be replaced with the current value of i
+strings.my_each do |string|
+ puts string.length
+end
+
+strings.my_each2 do |string|
+ puts string.length
+end
+
+#both syntax produce
+=> 1
+=> 2
+=> 3
+```
+<h3 style='padding-top:15px;'><i>Procs and lamdas</i></h3>
+We can also store blocks within variables as Procs or Lamdas. This is really convenient in part because it allows us to re-use the blocks without having to re-write it every time they need to be executed.
+
+```ruby
+  strings = ["a", "ab", "abc"]
+
+  #lambdas and procs are initialized in a slightly different way 
+  my_proc = Proc.new {|string| puts string.length}  
+  my_lamda = lambda {|string| puts string.length} 
+  
+  array.my_each(&proc)
+  array.my_each(&lamda)
+
+#Yet again both syntaxes will produce the same output
+=> 1
+=> 2
+=> 3 
+```
+It is important to note that procs and lambdas possess [subtle differences](http://awaxman11.github.io/blog/2013/08/05/what-is-the-difference-between-a-block/ "lambdas vs procs"	) despite that in this specific (and simple) case they produce the same result.
+
+<h3 style='padding-top:15px;'><i>Context</i></h3>
+Sometimes we want to pass a block to retrieve or modify the state of the instance variable that is calling it. In this case we can use the ```instance_eval(&block)``` method:
+
+```ruby
+#Different context for block
+class Dummy
+  def initialize
+    @name = 'inner name'
+  end
+
+  # Note how we need to pass the block to the instance_eval method
+  def print_name(&block)
+    instance_eval(&block)
+    yield
+  end
+end
+
+@name = 'outer name'
+
+# Dummy.new.print_name do
+#   puts @name
+# end
+
+# => inner name
+# => outer name
+```
+<small>Example taken from [Leigh Halliday's blog](http://www.leighhalliday.com/creating-ruby-dsl"Leigh Hallidays's blog") </small>
+
+That it for now, on my next couple or articles I am going to use this concepts to create a couple of DSLs.
+
+
+#There is a suttle difference the yield literally yields execution to the block that was passed
+#to the method it does not really care what that block was or how was constructed
+#Instance_eval evaluate the block passed in with a value defined inside the instance context.
+#In order for this method to do this it need to know which block we are talking about, that is why we passed it 
+#to as an argument 
+#This method is usefull when we want to evaluate blocks with internal information contain within an specific instance. 
+#This is pretty helpful when creating DSLs as we are going to see next
+
+# Dummy.new.print_name do
+#   puts @name
+# end
+
+# => outer name
+# => inner name
+```
+
+# app_routes = MyRouter.new.route do
+#   root 'home#main'
+#   get 'home', to: 'home#main', as: 'home_path'
+#   resources :posts
+# end
+# Need an intance of my Router e,g "@routes" attribute to store the current available routes
+# Need a method (route) that takes in a block and modifies the attribute @routes depending on the present within the block  
+# Need three methods root, get, resources that will add info to @routes in the form of specific routes
+# Finally need a method to display the current routes created 
+
+
+class MyRouter
+  attr_accessor :routes
+  
+  def initialize
+    @routes = []
+  end
+
+  def route(&block)
+    instance_eval(&block)
+  end
+
+  def root controller_action
+    @routes << {:named_route => 'root', :url => "/", :controller_action => "#{controller_action}", :http_verb => 'GET' }
+  end
+
+  def get(url, hash)
+    #hash should contain the  
+    @routes << {:named_route => "#{hash[:as]}", :url => "#{url}", :controller_action => "#{hash[:to]}", :http_verb => 'GET' }
+  end
+
+  def resources(resource)
+    @routes << {:named_route => "#{resource}", :url => "/#{resource}", :controller_action => "#{resource}#index", :http_verb => 'GET' }
+    @routes << {:named_route => "", :url => "/#{resource}", :controller_action => "#{resource}#create", :http_verb => 'POST' }
+    @routes << {:named_route => "new_#{singularize(resource)}", :url => "/#{resource}/new", :controller_action => "#{resource}#new", :http_verb => 'GET' }
+    @routes << {:named_route => "edit_#{singularize(resource)}", :url => "/#{resource}/:id/edit", :controller_action => "#{resource}#edit", :http_verb => 'GET' }
+    @routes << {:named_route => "#{singularize(resource)}", :url => "/#{resource}/:id", :controller_action => "#{resource}#show", :http_verb => 'GET' }
+    @routes << {:named_route => "", :url => "/#{resource}/:id", :controller_action => "#{resource}#update", :http_verb => 'PATCH' }
+    @routes << {:named_route => "", :url => "/#{resource}/:id", :controller_action => "#{resource}#update", :http_verb => 'PUT' }
+    @routes << {:named_route => "", :url => "/#{resource}/:id", :controller_action => "#{resource}#destroy", :http_verb => 'DELETE' }
+  end
+
+  def display_routes
+    #The formatting wont't be as nice but it will do
+    @routes.each do |route|
+      puts "#{route[:named_route]} #{route[:http_verb]}  #{route[:url]} #{route[:controller_action]}"
+    end
+  end
+
+  private
+  def singularize(resource)
+    if resource[-1] == 's'
+      return resource[0...-1]
+    end
+  end
+end
+
+# my_router = MyRouter.new
+#
+# my_router.route do
+#   root "home#index"
+# end
+#
+# p my_router.routes
+
+#alternatevely to make it look more like the rails api we could just
+
+# my_router = MyRouter.new
+#
+# my_router.route do
+#   root "home#index"
+#   get "/latest", to: 'posts#latest', as: 'lastest_posts' 
+#   resources :posts
+# end
+#
+# my_router.display_routes
+
+
+#Fancy markup
+#I want to be able to obtain this:
+# <html>
+#   <body>
+#     <div id="container">
+#       <ul class="pretty">
+#         <li class="active">Item 1</li>
+#         <li>Item 2</li>
+#       </ul>
+#     </div>
+#   </body>
+# </html>
+#
+# #by writting this:
+# output = FancyMarkup.new.document do
+#   body do
+#     div id: "container" do
+#       ul class: "pretty" do
+#         li "Item 1", class: :active
+#         li "Item 2"
+#       end
+#     end
+#   end
+# end
+
+#I need a instance attribute (@markup) that will contain the string containing the tags that we want
+#I need a document intance method (.document) that will take a block as a parameter and will modify the @markup intance variable 
+#I need some methods (body, div, ul, etc) that will modify the @markup in specific ways 
+#I need to keep track of the indenation (somehow?) maybe using a indentation instance variable
+
+class FancyMarkup
+  attr_accessor :markup, :indent
+
+  def initialize
+    @markup = ""
+    @indent = "  "
+  end
+  
+  def document(&block)
+    @markup << "<html>\n"
+    instance_eval(&block)
+    @markup << "</html>"
+  end
+  
+  def method_missing(tag_name, *args, &block)
+    tag(tag_name, args, &block) 
+  end 
+
+  private
+  def tag(tag_name, args, &block)
+    current_indentation = @indent
+    content, selectors = tag_info(args)  
+    
+    markup << "#{current_indentation}<#{tag_name}#{attributes(selectors)}>#{content}"
+
+    if block_given?
+      @indent += "  "
+      @markup << "\n"
+      instance_eval(&block)
+      markup << "#{current_indentation}</#{tag_name}>\n"
+    else
+      markup << "</#{tag_name}>\n"
+    end
+  end
+
+  def attributes(arg)
+    attrib = ""
+    arg.each do |key, value|
+      attrib << %( #{key}="#{value}")  
+    end
+    attrib
+  end
+
+  def tag_info(args)
+    content = ""
+    selectors = {}
+
+    args.each do |arg|
+      content = arg if arg.is_a?(String)
+      selectors = arg if arg.is_a?(Hash)
+    end 
+
+    [content, selectors]
+  end
+end
+
+
+my_markup = FancyMarkup.new.document do
+  body do
+    div id: "container", class: "gmail", data_attribute: 'stripe-key' do
+      ul class: "pretty" do
+        li "Item 1", class: :active
+        li "Item 2"
+      end
+    end 
+  end
+end
+
+puts my_markup
