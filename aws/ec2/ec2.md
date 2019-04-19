@@ -21,6 +21,7 @@ We'll go through each of these steps and explain all the new terms along the way
 Amazon has datacenters located on different parts of the [world](https://aws.amazon.com/about-aws/global-infrastructure/) which are known as [regions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html). Each region contains a certain number of availability zones (AZ) where ultimately the infrastructure lives. While each region is completely independent from each other, AZs from within the same region can communicate with each other through [low latency links](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-regions-availability-zones) nevertheless, they are phisically and resource-wise (power suply, etc) isolated from one another. This set up allows AWS to efficiently serve users accross the globe while providing enough redundancy to protect against unfortunate events (e.g power outages, natural disasters, etc).
 
 Choosing an AWS region is easy just go to the top right corner and choose one according to your location.
+
 [INSERT GIF]
 
 As a rule of thumb you should pick a region that it's closest to where you're users are located to minimize latency. In my particular case that would be US EAST. 
